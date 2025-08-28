@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>All Payments</title>
+    <style>
+        table { width: 90%; margin: auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background: orange; color: white; }
+        img { max-width: 100px; max-height: 100px; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center;">All Payment Records</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Mobile Number</th>
+            <th>Screenshot</th>
+        </tr>
+        <tr th:each="p : ${payments}">
+            <td th:text="${p.id}"></td>
+            <td th:text="${p.name}"></td>
+            <td th:text="${p.mobileNumber}"></td>
+     <td>
+    <div th:if="${p.screenshotPath != null}">
+        <a th:href="${p.screenshotPath}" target="_blank">
+            <img th:src="${p.screenshotPath}" alt="Screenshot"/>
+        </a>
+    </div>
+    <span th:if="${p.screenshotPath == null}">No Screenshot</span>
+</td>
+
+        </tr>
+    </table>
+</body>
+</html>

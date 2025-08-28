@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Ganesh Laddu Lottery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cinzel:wght@700&family=Baloo+Bhaina+2:wght@600&family=Merienda:wght@600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            text-align: center;
+            font-family: 'Baloo Bhaina 2', cursive;
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #fff8f0, #fbe9e7, #ede7f6);
+            background-size: 400% 400%;
+            animation: bgFlow 12s infinite alternate;
+        }
+        @keyframes bgFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1 { font-family: 'Cinzel', serif; font-size: 3rem; color: #3e2723; text-shadow: 0 0 12px goldenrod, 0 0 25px orange; margin-bottom: 5px; }
+        h2 { font-family: 'Great Vibes', cursive; font-size: 2rem; color: #6a1b9a; margin-bottom: 20px; }
+
+        .form-box, .payment-box {
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            width: 90%; max-width: 500px;
+            background: #ffffffee;
+        }
+
+        input, button {
+            display: block;
+            padding: 12px;
+            margin: 12px auto;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%; max-width: 400px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #ff9800;
+            color: white; border: none; cursor: pointer;
+            font-weight: bold; transition: 0.3s ease;
+        }
+        button:hover { background-color: #e65100; }
+
+        .payment-options {
+            display: flex; justify-content: space-around; flex-wrap: wrap; margin-top: 15px;
+        }
+        .payment-options button { background: none; border: none; cursor: pointer; }
+        .payment-options img { width: 85px; }
+
+        .qr-section img { max-width: 220px; border-radius: 8px; margin-top: 10px; }
+
+        .welcome-text { font-family: 'Merienda', cursive; font-size: 1.4rem; color: #283593; margin-bottom: 10px; }
+        .welcome-text span { font-size: 1.6rem; color: #00695c; font-weight: bold; }
+
+        .note-box {
+            font-family: 'Merienda', cursive;
+            background: #fff3e0;
+            border-left: 6px solid #ff9800;
+            border-radius: 10px;
+            padding: 18px;
+            margin: 20px 0;
+            color: #4e342e;
+            font-size: 1rem;
+        }
+        .note-box strong.price { color: #d32f2f; font-size: 1.3rem; font-weight: bold; text-shadow: 0 0 8px gold, 0 0 15px orange; }
+        .note-box strong.manual { color: #d32f2f; font-size: 1.2rem; font-weight: bold; }
+
+        /* Steps Box */
+        .steps-box {
+            text-align: left;
+            background: #e3f2fd;
+            border-left: 6px solid #2196f3;
+            border-radius: 12px;
+            padding: 18px 25px;
+            margin: 20px 0;
+            color: #0d47a1;
+            font-family: 'Merienda', cursive;
+            font-size: 1rem;
+        }
+        .steps-box h3 { text-align: center; color: #1565c0; margin-bottom: 12px; }
+        .steps-box ol { padding-left: 20px; }
+        .steps-box li { margin: 10px 0; font-weight: bold; }
+
+        .or-divider { margin: 15px 0; font-weight: bold; color: #666; font-size: 1.1rem; }
+
+        .congrats-box {
+            font-family: 'Cinzel', serif;
+            background: linear-gradient(270deg, #fff3cd, #e1bee7, #bbdefb, #c8e6c9);
+            background-size: 600% 600%;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            color: #3e2723;
+            font-weight: bold;
+            box-shadow: 0 0 25px rgba(255, 193, 7, 0.6);
+            animation: gradientMove 8s infinite ease-in-out;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+            .welcome-text { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <img src="https://png.pngtree.com/png-vector/20241219/ourmid/pngtree-lord-ganesha-idol-in-white-representing-wisdom-prosperity-and-blessings-png-image_14791802.png" 
+             alt="Ganesh" width="200">
+    </div>
+
+    <h1>Ganesh Laddu Lottery</h1>
+    <h2>Ram Sena Youth Association</h2>
+
+    <div class="form-box" th:if="${name == null}">
+        <form method="POST" th:action="@{/enter}" onsubmit="return validateForm()">
+            <input type="text" name="name" id="name" placeholder="Enter your name" required>
+            <input type="text" name="mobile" id="mobile" placeholder="Enter your 10-digit mobile number" required maxlength="10" pattern="[0-9]{10}">
+            <button type="submit">Enter</button>
+        </form>
+    </div>
+
+    <div class="payment-box" th:if="${name != null}">
+        <div th:if="${showLottery}">
+            <div class="congrats-box">
+                <h2>🎉 Congratulations! 🎉</h2>
+                <p>Your payment info is saved ✅</p>
+                <p>✨ Our team will review your payment and your <strong>Lottery ID</strong> will be shared on WhatsApp 📲</p>
+                <p>🙏 Thank you for being part of the Ganesh Laddu Lottery 2025 🪔</p>
+            </div>
+        </div>
+
+        <div th:if="${showUpload}">
+            <div class="welcome-text">
+                Welcome, <span th:text="${name}"></span> 🙏 <br>
+                📞 Mobile: <span th:text="${mobile}"></span>
+            </div>
+
+            <div class="steps-box">
+                <h3>How to Participate:</h3>
+                <ol>
+                    <li>Step 1: Complete the payment of <strong class="price">₹99/-</strong> using any preferred method below or QR code.</li>
+                    <li>Step 2: Take a clear screenshot of your successful payment.</li>
+                    <li>Step 3: Upload the screenshot manually using the form provided below.</li>
+                </ol>
+            </div>
+
+            <h3>Select Payment Method:</h3>
+            <div class="payment-options">
+                <button type="button" onclick="payViaPhonePe()">
+                    <img src="https://download.logo.wine/logo/PhonePe/PhonePe-Logo.wine.png" alt="PhonePe">
+                </button>
+                <button type="button" onclick="payViaGooglePay()">
+                    <img src="https://download.logo.wine/logo/Google_Pay/Google_Pay-Logo.wine.png" alt="Google Pay">
+                </button>
+                <button type="button" onclick="payViaPaytm()">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/42/Paytm_logo.png" alt="Paytm">
+                </button>
+            </div>
+
+            <div class="or-divider">OR</div>
+
+            <div class="qr-section">
+                <h3>Scan QR Code to Pay:</h3>
+                <img src="https://i.postimg.cc/zXgKys9C/scanner.jpg" alt="QR Code">
+            </div>
+<div class="upload-section">
+    <h3>Upload Payment Screenshot:</h3>
+    <form method="POST" th:action="@{/upload}">
+        <input type="hidden" name="name" th:value="${name}">
+        <input type="hidden" name="mobile" th:value="${mobile}">
+        <button type="submit">Upload</button>
+    </form>
+</div>
+
+        </div>
+    </div>
+<script>
+    function validateForm() {
+        const mobile = document.getElementById("mobile").value;
+        const regex = /^[0-9]{10}$/;
+        if (!regex.test(mobile)) {
+            alert("Please enter a valid 10-digit mobile number.");
+            return false;
+        }
+        return true;
+    }
+
+    function payViaPhonePe() {
+        window.location.href = "upi://pay?pa=nandupulugam@ybl&pn=Nandu%20Pulugam&am=99&cu=INR&tn=Ganesh%20Laddu%20Lottery";
+    }
+
+    function payViaGooglePay() {
+        window.location.href = "upi://pay?pa=nandupulugam@okaxis&pn=Nandu%20Pulugam&am=99&cu=INR&tn=Ganesh%20Laddu%20Lottery";
+    }
+
+    function payViaPaytm() {
+        window.location.href = "upi://pay?pa=paytmqr2810050501011jnpf05b6ny@paytm&pn=Nandu%20Pulugam&am=99&cu=INR&tn=Ganesh%20Laddu%20Lottery";
+    }
+
+    function isIOS() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    window.onload = function() {
+        if (isIOS()) {
+            const options = document.querySelector(".payment-options");
+            if (options) options.style.display = "none";   // hides PhonePe / GPay / Paytm buttons
+
+            const orDivider = document.querySelector(".or-divider");
+            if (orDivider) orDivider.style.display = "none"; // hides the "OR"
+
+            const qrSection = document.querySelector(".qr-section");
+            if (qrSection) {
+                qrSection.style.display = "block";
+
+                // ✅ Add iPhone-only note
+                const note = document.createElement("p");
+                note.innerHTML = "⚠️ On iPhone, UPI apps (PhonePe, GPay, Paytm) are not supported directly. Please scan the QR code to complete your payment.";
+                note.style.color = "#d32f2f";
+                note.style.fontSize = "14px";
+                note.style.marginTop = "10px";
+                qrSection.appendChild(note);
+            }
+        }
+    };
+</script>
+
+
+</body>
+</html>
