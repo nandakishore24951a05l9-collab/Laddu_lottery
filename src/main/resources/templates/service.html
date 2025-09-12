@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+  <div id="login-container" class="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center mb-6 text-blue-700">Login to Service</h2>
+
+    <!-- Step 1: Mobile Number -->
+    <div id="step1">
+      <label class="block text-gray-600 mb-2">Enter Mobile Number</label>
+      <input id="mobile" type="tel" maxlength="10" placeholder="e.g. 9876543210"
+             class="w-full border rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-blue-400 outline-none">
+      <button onclick="sendOTP()"
+              class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">Send OTP</button>
+    </div>
+
+    <!-- Step 2: OTP Verification -->
+    <div id="step2" class="hidden">
+      <label class="block text-gray-600 mb-2">Enter OTP</label>
+      <input id="otp" type="number" placeholder="Enter 4-digit OTP"
+             class="w-full border rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-blue-400 outline-none">
+      <button onclick="verifyOTP()"
+              class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700">Verify OTP</button>
+    </div>
+
+    <!-- Step 3: Role Selection -->
+    <div id="step3" class="hidden text-center">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Select Your Role</h3>
+      <div class="flex flex-col gap-4">
+        <button onclick="goToPage('/customer')"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">I am a Customer</button>
+        <button onclick="goToPage('/technician')"
+                class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">I am a Technician</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Step 1: Send OTP
+    function sendOTP() {
+      const mobile = document.getElementById("mobile").value.trim();
+      if (mobile.length !== 10) {
+        alert("Please enter a valid 10-digit mobile number.");
+        return;
+      }
+
+      fetch("/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "mobile=" + mobile
+      })
+      .then(res => res.text())
+      .then(data => {
+        alert(data);
+        document.getElementById("step1").classList.add("hidden");
+        document.getElementById("step2").classList.remove("hidden");
+      })
+      .catch(err => alert("Error sending OTP ❌"));
+    }
+
+    // Step 2: Verify OTP
+    function verifyOTP() {
+      const otp = document.getElementById("otp").value.trim();
+      const mobile = document.getElementById("mobile").value.trim();
+
+      fetch("/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "mobile=" + mobile + "&otp=" + otp
+      })
+      .then(res => res.json())
+      .then(valid => {
+        if (valid) {
+          alert("OTP Verified Successfully ✅");
+          document.getElementById("step2").classList.add("hidden");
+          document.getElementById("step3").classList.remove("hidden");
+        } else {
+          alert("Invalid OTP ❌ Please try again.");
+        }
+      })
+      .catch(err => alert("Error verifying OTP ❌"));
+    }
+
+    // Step 3: Redirect
+    function goToPage(page) {
+      window.location.href = page;
+    }
+  </script>
+</body>
+</html>

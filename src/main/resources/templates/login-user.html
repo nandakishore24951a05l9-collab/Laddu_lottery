@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalCraft Login</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<style>
+    * { font-family: 'Poppins', sans-serif; }
+    .login-container { display: flex; min-height: 100vh; }
+    .login-left {
+        width: 70%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0 50px 50px 0;
+        clip-path: ellipse(85% 100% at 0% 50%);
+        position: relative;
+        overflow: hidden;
+    }
+    .login-left::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: float 20s ease-in-out infinite;
+    }
+    @keyframes float {
+        0%,100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    .logo-container { text-align: center; z-index: 10; }
+    .logo-icon { display: inline-block; padding: 20px; border-radius: 50%; margin-bottom: 30px; animation: pulse 3s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .brand-title {
+        font-family: Lora;
+        font-size: 6rem;
+        font-weight: 600;
+        background: linear-gradient(45deg, #ffffff, #f0f8ff, #e6e6fa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -2px;
+        margin-bottom: 20px;
+    }
+    .brand-tagline { font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 300; font-style: italic; opacity: 0.9; }
+    .login-right {
+        width: 30%;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-radius: 0 50px 50px 0;
+    }
+    .login-right input { width: 100%; border: 1px solid #ddd; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+    .btn-login { width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.3s ease; }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.3); }
+    .error-msg { color: red; font-size: 0.9rem; margin-bottom: 1rem; display: none; text-align: left; }
+    @media (max-width: 768px) {
+        .login-container { flex-direction: column; }
+        .login-left, .login-right { width: 100%; }
+        .login-left { min-height: 50vh; clip-path: none; border-radius: 0 0 30px 30px; }
+        .brand-title { font-size: 4rem; }
+    }
+    @media (max-width: 480px) { .brand-title { font-size: 3rem; } }
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="login-container">
+    <!-- Left Branding -->
+    <div class="login-left">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <i class="fas fa-tools text-white text-6xl"></i>
+            </div>
+            <h1 class="brand-title">LocalCraft</h1>
+            <p class="brand-tagline">Find Trusted Local Workers Near You</p>
+        </div>
+    </div>
+
+    <!-- Right Login Form -->
+    <div class="login-right text-center">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">Login</h2>
+        <div id="error-msg" class="error-msg"></div>
+        <input type="email" id="email" placeholder="Enter your email">
+        <input type="password" id="password" placeholder="Enter your password">
+        <button class="btn-login mt-2" onclick="loginUser()"><i class="fas fa-sign-in-alt mr-2"></i>Login</button>
+    </div>
+</div>
+
+<script>
+async function loginUser() {
+  const emailRaw = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const errorDiv = document.getElementById('error-msg');
+  errorDiv.style.display = "none";
+  errorDiv.innerText = "";
+
+  if (!emailRaw || !password) {
+    errorDiv.innerText = "Please enter both email and password.";
+    errorDiv.style.display = "block";
+    return;
+  }
+
+  const email = emailRaw.toLowerCase(); // safer with case-insensitive lookup
+
+  // Helpers
+  const saveIdentityAndRedirect = (userLike) => {
+    // userLike can be either {status:'success', role, name, techId} OR a full User entity
+    const roleRaw =
+      (userLike.role)
+      || (userLike.authorities && userLike.authorities[0] && userLike.authorities[0].authority) // spring userdetails?
+      || (userLike.profession) // fall back to profession
+      || 'customer';
+
+    // Normalize: carpenters are technicians in your routing
+    let role = String(roleRaw || '').trim().toLowerCase();
+    if (role === 'carpenter') role = 'technician';
+
+    try {
+      sessionStorage.setItem('lc.role', role);
+      sessionStorage.setItem('lc.email', email);
+      if (userLike.name)   sessionStorage.setItem('lc.name', userLike.name);
+      if (userLike.firstName || userLike.lastName) {
+        const nm = [userLike.firstName||'', userLike.lastName||''].join(' ').trim();
+        if (nm) sessionStorage.setItem('lc.name', nm);
+      }
+      if (userLike.techId || userLike.id) {
+        sessionStorage.setItem('lc.techId', String(userLike.techId || userLike.id));
+      }
+    } catch (_) {}
+
+    if (role === 'customer') {
+      window.location.href = '/customer-details';
+    } else if (role === 'technician') {
+      window.location.href = '/technician';
+    } else {
+      errorDiv.innerText = "Unknown role. Contact support.";
+      errorDiv.style.display = "block";
+    }
+  };
+
+  // Try /auth/login (JSON API), then /users/login (returns User), then Spring form /login
+  try {
+    // 1) /auth/login (expected JSON: {status:'success', role, name, techId} or {status:'error', message})
+    let res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+
+    if (res.ok) {
+      let data;
+      try { data = await res.json(); } catch { data = null; }
+      if (data && data.status === 'success') {
+        saveIdentityAndRedirect(data);
+        return;
+      }
+      // If backend returns a user object directly by chance
+      if (data && (data.email || data.id)) {
+        saveIdentityAndRedirect(data);
+        return;
+      }
+      // Not success → fall through to next route
+    }
+
+    // 2) /users/login (expected User JSON on success; throws on invalid)
+    res = await fetch('/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+
+    if (res.ok) {
+      let user;
+      try { user = await res.json(); } catch { user = null; }
+      if (user && (user.email || user.id)) {
+        saveIdentityAndRedirect(user);
+        return;
+      }
+    } else {
+      // Try to read message body for more details
+      let text = '';
+      try { text = await res.text(); } catch {}
+      if (text && /invalid/i.test(text)) {
+        errorDiv.innerText = "Invalid email or password.";
+        errorDiv.style.display = "block";
+        return;
+      }
+      // fall through to last attempt
+    }
+
+    // 3) Spring Security form login at /login (x-www-form-urlencoded; params 'username' and 'password')
+    const formBody = new URLSearchParams({ username: email, password });
+    res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
+      body: formBody
+    });
+
+    if (res.redirected) {
+      // Spring will redirect after success based on role; we just follow it.
+      window.location.href = res.url;
+      return;
+    }
+
+    if (res.ok) {
+      // Some setups return 200 without redirect; try to fetch current user if you have /auth/me, otherwise default
+      try {
+        const me = await fetch('/auth/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null);
+        if (me) { saveIdentityAndRedirect(me); return; }
+      } catch (_) {}
+      // Fallback (unknown role): send to customer
+      window.location.href = '/customer-details';
+      return;
+    }
+
+    // If we reached here, all attempts failed
+    errorDiv.innerText = "Invalid credentials or server rejected login.";
+    errorDiv.style.display = "block";
+
+  } catch (err) {
+    console.error(err);
+    errorDiv.innerText = "Server error while attempting to login.";
+    errorDiv.style.display = "block";
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Worker Details • LocalCraft</title>
+
+  <!-- Tailwind & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <!-- Leaflet (kept; harmless if unused) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    html{scroll-behavior:smooth}
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    .chip{display:inline-block;padding:.25rem .6rem;border-radius:9999px;background:#f3e8ff;color:#6d28d9;font-weight:600;font-size:.75rem;margin-right:.5rem;margin-top:.4rem}
+    .soft-card{background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .avatar{width:84px;height:84px;border-radius:9999px;object-fit:cover;background:#e5e7eb}
+    .badge{background:#e6f9ee;color:#0f7a43;border:1px solid #bdebd2;padding:.15rem .5rem;border-radius:9999px;font-size:.75rem;font-weight:700}
+    .skeleton{background:linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%);animation:shine 1.4s infinite;background-size:400% 100%}
+    @keyframes shine{0%{background-position:100% 0}100%{background-position:-100% 0}}
+    .star-btn{cursor:pointer}
+    .svc-card{cursor:pointer;transition:box-shadow .15s, transform .15s}
+    .svc-card:hover{box-shadow:0 12px 36px rgba(0,0,0,.12); transform: translateY(-1px)}
+    .svc-sub{font-size:.85rem}
+    .modal-mask{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999}
+    .modal-mask.open{display:flex}
+  </style>
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Top Nav -->
+  <nav class="fixed top-0 w-full gradient-bg shadow z-50">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex items-center justify-between h-14">
+        <div class="flex items-center space-x-2 text-white">
+          <i class="fas fa-tools text-xl"></i>
+          <span class="font-bold text-xl">LocalCraft</span>
+        </div>
+        <div class="hidden md:flex items-center space-x-6">
+          <a href="/customer-details#home" class="text-white hover:text-gray-200">Home</a>
+          <a href="/customer-details#about" class="text-white hover:text-gray-200">About</a>
+          <a href="/customer-details#services" class="text-white hover:text-gray-200">Services</a>
+          <!-- <a href="/customer-details#how-it-works" class="text-white hover:text-gray-200">How It Works</a> -->
+          <a href="/customer-details#reviews" class="text-white hover:text-gray-200">Reviews</a>
+          <a href="/customer-details#help" class="text-white hover:text-gray-200">Help</a>
+          <a href="/customer-details#profile" class="text-white hover:text-gray-200"><i class="fas fa-user mr-1"></i></a>
+           <a href="/my-requests" class="nav-link block px-3 py-2 text-white">
+                <i class="fas fa-list-check mr-1"></i>My Requests
+            </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Body -->
+  <main class="max-w-6xl mx-auto px-4 pt-24 pb-16">
+    <div class="mb-4">
+      <button onclick="location.href='/carpenter'" class="text-purple-700 hover:text-purple-900 font-medium">
+        <i class="fas fa-arrow-left mr-2"></i>Back
+      </button>
+    </div>
+
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-6">Worker Details</h1>
+
+    <div class="soft-card p-6 md:p-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Left Profile Column -->
+        <section class="col-span-1">
+          <div class="flex items-center space-x-4">
+            <img id="wd-avatar" class="avatar skeleton cursor-pointer" alt="Avatar" onclick="openPhotoModal()">
+            <div class="flex flex-col">
+              <h2 id="wd-name" class="text-xl font-bold text-gray-900 mb-1 skeleton" style="min-width:180px;height:20px;border-radius:6px"></h2>
+              <div id="wd-stars" class="text-yellow-500 mt-0.5">★★★★★</div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <span id="wd-availability" class="badge">Available Today</span>
+          </div>
+
+          <dl class="mt-5 space-y-2 text-sm">
+            <div class="flex items-start">
+              <i class="fas fa-briefcase mt-0.5 w-5 text-gray-500"></i>
+              <span id="wd-experience" class="text-gray-700">— years experience</span>
+            </div>
+            <div class="flex items-start">
+              <i class="fas fa-phone mt-0.5 w-5 text-gray-500"></i>
+              <span id="wd-phone" class="text-gray-700">—</span>
+            </div>
+            <div class="flex items-start">
+              <i class="fas fa-location-dot mt-0.5 w-5 text-gray-500"></i>
+              <span id="wd-address" class="text-gray-700">Resolving address…</span>
+            </div>
+            <div class="flex items-start">
+              <i class="fas fa-road mt-0.5 w-5 text-gray-500"></i>
+              <span id="wd-distance" class="text-gray-700">— km away</span>
+            </div>
+          </dl>
+        </section>
+
+        <!-- Right Details Column -->
+        <section class="col-span-2">
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">About</h3>
+            <p id="wd-about" class="text-gray-700 mt-1">Loading…</p>
+          </div>
+
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">Services Offered</h3>
+            <div id="wd-services" class="mt-2"></div>
+          </div>
+
+          <!-- Button now redirects to the dedicated map page -->
+          <div class="mb-8">
+            <button
+              id="btnLocate"
+              class="px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              onclick="goToLocatePage()">
+              <i class="fa-solid fa-location-crosshairs mr-2"></i>Locate Technician
+            </button>
+          </div>
+
+          <!-- Leave a review -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Leave a Review</h3>
+            <div class="soft-card p-4 border border-gray-100">
+              <div class="flex items-center gap-3">
+                <input id="rev-name" type="text" placeholder="Your name" class="border border-gray-300 rounded px-3 py-2 w-60 focus:outline-none focus:border-purple-500">
+                <div id="rev-stars" class="flex items-center gap-1 text-gray-300">
+                  <i class="fas fa-star star-btn" data-v="1"></i>
+                  <i class="fas fa-star star-btn" data-v="2"></i>
+                  <i class="fas fa-star star-btn" data-v="3"></i>
+                  <i class="fas fa-star star-btn" data-v="4"></i>
+                  <i class="fas fa-star star-btn" data-v="5"></i>
+                  <span id="rev-rating-label" class="text-sm text-gray-600 ml-2">(select rating)</span>
+                </div>
+              </div>
+              <textarea id="rev-text" rows="3" placeholder="Write your experience…" class="border border-gray-300 rounded px-3 py-2 mt-3 w-full focus:outline-none focus:border-purple-500"></textarea>
+              <button id="rev-submit" class="mt-3 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Submit Review</button>
+              <div id="rev-msg" class="text-sm mt-2"></div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">All Reviews</h3>
+            <div id="wd-reviews" class="space-y-3"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Photo Modal (kept) -->
+  <div id="photo-modal" class="modal-mask">
+    <div class="absolute inset-0 bg-black/60" onclick="closePhotoModal()"></div>
+    <div class="relative bg-white rounded-xl shadow-2xl overflow-hidden w-[92vw] max-w-2xl">
+      <button class="absolute top-3 right-3 z-[10001] text-gray-700 bg-white/95 rounded-full p-2 shadow hover:bg-white"
+              onclick="closePhotoModal()" title="Close">
+        <i class="fa-solid fa-xmark text-2xl"></i>
+      </button>
+      <img id="photo-full" alt="Profile Photo" class="w-full h-auto block">
+    </div>
+  </div>
+
+  <!-- (Existing map modal blocks are left untouched; they won’t interfere) -->
+
+  <script src="https://kit.fontawesome.com/fe1ff344aa.js" crossorigin="anonymous"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin="">
+  </script>
+
+<script>
+  /* (All your helpers and render logic kept exactly as before) */
+  const PLACEHOLDER='https://via.placeholder.com/84?text=%20';
+  const addrCache={}; let CURRENT_ID=null; let CURRENT_LOC=null; let CURRENT_RATING=0;
+
+  function uuid4(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+  function ensureCustomerKey(){try{let k=localStorage.getItem('lc.key');if(!k){const ck=(document.cookie.match(/(?:^|; )lc_key=([^;]+)/)||[])[1];k=ck?decodeURIComponent(ck):uuid4();localStorage.setItem('lc.key',k);}document.cookie='lc_key='+encodeURIComponent(k)+'; path=/; max-age='+(60*60*24*365);return k;}catch(e){const f=uuid4();document.cookie='lc_key='+encodeURIComponent(f)+'; path=/; max-age='+(60*60*24*365);return f;}}
+  function getStoredPhone(){try{const m=document.cookie.match(/(?:^|; )lc_phone=([^;]+)/);const ck=m?decodeURIComponent(m[1]):null;return sessionStorage.getItem('lc.customer.phone')||localStorage.getItem('lc.customer.phone')||localStorage.getItem('customerPhone')||ck;}catch(e){return null;}}
+  function saveCustomerPhone(p){if(!p)return;try{localStorage.setItem('lc.customer.phone',p);}catch(e){}try{sessionStorage.setItem('lc.customer.phone',p);}catch(e){}document.cookie='lc_phone='+encodeURIComponent(p)+'; path=/';}
+  (function(){try{ensureCustomerKey();}catch(e){}})();
+  function getQueryId(){const u=new URL(window.location.href);return u.searchParams.get('id');}
+  function stars(n){const v=Math.max(0,Math.min(5,Math.round(n||0)));return'★'.repeat(v)+'☆'.repeat(5-v);}
+  async function toReadableAddress(locStr){if(!locStr||!locStr.includes(','))return'—';let[lat,lng]=locStr.split(',').map(v=>parseFloat(v.trim()));if(Number.isNaN(lat)||Number.isNaN(lng))return'—';const key=`${lat.toFixed(4)},${lng.toFixed(4)}`;if(addrCache[key])return addrCache[key];try{const url=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;const resp=await fetch(url,{headers:{'Accept':'application/json'}});if(!resp.ok)throw new Error('geocode failed');const data=await resp.json();const a=data.address||{};const parts=[a.road,a.neighbourhood,a.suburb,a.village,a.hamlet,a.town,a.city,a.state,a.postcode].filter(Boolean);const text=parts.join(', ')||`${lat.toFixed(4)}, ${lng.toFixed(4)}`;addrCache[key]=text;return text;}catch(e){return`${lat.toFixed(4)}, ${lng.toFixed(4)}`;}}
+  function chip(label){const div=document.createElement('span');div.className='chip';div.textContent=label;return div;}
+  function reviewItem({author='User',rating=5,text='—'}){const w=document.createElement('div');w.className='soft-card px-4 py-3';w.innerHTML=`<div class="flex items-center justify-between"><div class="font-semibold text-gray-900">${author}</div><div class="text-yellow-500 text-sm">${stars(rating)}</div></div><p class="text-gray-700 text-sm mt-1">${text}</p>`;return w;}
+  function normalizeImageUrl(raw){if(!raw)return'';const s=String(raw);if(/^data:image\//i.test(s))return s;if(/^https?:\/\//i.test(s))return s;if(s.startsWith('/'))return s;return'/uploads/'+encodeURIComponent(s);}
+  async function safeImage(imgEl,url){imgEl.src=PLACEHOLDER;const real=normalizeImageUrl(url);if(!real)return;const ok=await new Promise(res=>{const t=new Image();t.onload=()=>res(true);t.onerror=()=>res(false);t.src=real;});if(ok)imgEl.src=real;}
+  function haversine(lat1,lon1,lat2,lon2){const R=6371;const dLat=(lat2-lat1)*Math.PI/180;const dLon=(lon2-lon1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+  function setStarsUI(c,v){[...c.querySelectorAll('.star-btn')].forEach(st=>{const x=Number(st.dataset.v);st.classList.toggle('text-yellow-400',x<=v);st.classList.toggle('text-gray-300',x>v);});const lbl=document.getElementById('rev-rating-label');lbl.textContent=v?`(${v}/5)`:'(select rating)';}
+
+  async function loadWorker(){
+    const id=getQueryId(); if(!id){ alert('No worker id provided.'); return; }
+    CURRENT_ID=id;
+    let detail={}; try{const r=await fetch(`/technicians/${id}`); if(r.ok) detail=await r.json();}catch(e){}
+    const name=`${detail.firstName||detail.name||''} ${detail.lastName||''}`.trim()||'Technician';
+    document.title=`${name} • LocalCraft`;
+    const nameEl=document.getElementById('wd-name'); nameEl.classList.remove('skeleton'); nameEl.textContent=name;
+    const avatar=detail.profilePhoto||detail.photoUrl||''; safeImage(document.getElementById('wd-avatar'), avatar);
+    document.getElementById('photo-full').src=normalizeImageUrl(avatar)||PLACEHOLDER;
+    document.getElementById('wd-stars').textContent=stars(detail.rating||5);
+    document.getElementById('wd-experience').textContent=`${detail.experience??0} years experience`;
+    document.getElementById('wd-phone').textContent=detail.phone||'—';
+    const locStr=detail.location||''; CURRENT_LOC=locStr;
+    document.getElementById('wd-address').textContent=await toReadableAddress(locStr);
+
+    let distanceText='— km away';
+    if(typeof detail.distanceKm==='number'){ distanceText=`${Number(detail.distanceKm).toFixed(2)} km away`; }
+    else if(locStr && locStr.includes(',')){ if(navigator.geolocation){ navigator.geolocation.getCurrentPosition((pos)=>{ const [tLat,tLng]=locStr.split(',').map(v=>parseFloat(v.trim())); const d=haversine(pos.coords.latitude,pos.coords.longitude,tLat,tLng); document.getElementById('wd-distance').textContent=`${d.toFixed(2)} km away`; },()=>{ document.getElementById('wd-distance').textContent=distanceText;});}}
+    document.getElementById('wd-distance').textContent=distanceText;
+
+    const avail=(detail.available===false)?'Currently Unavailable':'Available Today';
+    const badge=document.getElementById('wd-availability'); badge.textContent=avail;
+    if(avail!=='Available Today'){badge.classList.remove('badge');badge.className='badge';badge.style.background='#fff4f2';badge.style.borderColor='#ffd5cc';badge.style.color='#a73316';}
+
+    const about=detail.about||'Specializing in custom furniture and home renovations. Over 200 successful projects including kitchen remodels and custom built-ins.';
+    document.getElementById('wd-about').textContent=about;
+
+    const root=document.getElementById('wd-services');
+    const services=Array.isArray(detail.services)&&detail.services.length?detail.services:(detail.specialization?[detail.specialization]:['Custom Furniture','Cabinet Installation','Home Repairs']);
+    root.innerHTML=''; services.slice(0,10).forEach(s=>root.appendChild(chip(String(s))));
+    await loadReviews();
+    try{const ph=getStoredPhone(); if(ph) document.getElementById('custPhone').value=ph;}catch(e){}
+  }
+
+  async function loadReviews(){
+    const root=document.getElementById('wd-reviews'); root.innerHTML='';
+    let reviews=[]; try{const rr=await fetch(`/technicians/${CURRENT_ID}/reviews`); if(rr.ok) reviews=await rr.json();}catch(e){}
+    if(!Array.isArray(reviews)) reviews=[]; reviews.slice().reverse().forEach(r=>root.prepend(reviewItem(r)));
+  }
+
+  function bindReviewUI(){
+    const box=document.getElementById('rev-stars');
+    box.addEventListener('click',e=>{const el=e.target.closest('.star-btn'); if(!el)return; CURRENT_RATING=Number(el.dataset.v)||0; setStarsUI(box,CURRENT_RATING);});
+    document.getElementById('rev-submit').addEventListener('click',async()=>{const msg=document.getElementById('rev-msg');const author=(document.getElementById('rev-name').value||'').trim();const text=(document.getElementById('rev-text').value||'').trim();if(!CURRENT_RATING){msg.textContent='Please select a rating.';msg.className='text-red-600';return;}if(!text){msg.textContent='Please write a short review.';msg.className='text-red-600';return;}try{const resp=await fetch(`/technicians/${CURRENT_ID}/reviews`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:author||'Anonymous',rating:CURRENT_RATING,text})});if(!resp.ok)throw new Error('save failed');msg.textContent='Thanks! Your review has been submitted.';msg.className='text-green-600';document.getElementById('rev-text').value='';setStarsUI(document.getElementById('rev-stars'),CURRENT_RATING=0);await loadReviews();}catch(e){msg.textContent='Could not submit review. Please try again.';msg.className='text-red-600';}}); setStarsUI(box,0);
+  }
+
+  /* === Photo modal === */
+  function openPhotoModal(){ document.getElementById('photo-modal').classList.add('open'); }
+  function closePhotoModal(){ document.getElementById('photo-modal').classList.remove('open'); }
+
+  /* === NEW: redirect to dedicated map page === */
+  function goToLocatePage(){
+    if(!CURRENT_ID){ CURRENT_ID = getQueryId(); }
+    window.location.href = '/locate-technician?id=' + encodeURIComponent(CURRENT_ID);
+  }
+
+  /* init */
+  (async function(){ bindReviewUI(); await loadWorker(); })();
+</script>
+
+</body>
+</html>

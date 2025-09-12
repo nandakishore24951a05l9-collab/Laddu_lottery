@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Track Job • LocalCraft</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    #map{height:72vh;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .badge{padding:.2rem .55rem;border-radius:9999px;font-size:.75rem;font-weight:700}
+    .badge-live{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+    .helper{font-size:.92rem;color:#4b5563}
+
+    /* Blinking “You” dot */
+    .pulse-dot{
+      width:18px;height:18px;background:#10b981;border-radius:9999px;border:2px solid #fff;
+      box-shadow:0 0 0 rgba(16,185,129,.55);animation:pulse 2s infinite;
+    }
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(16,185,129,.55)}
+      70%{box-shadow:0 0 0 18px rgba(16,185,129,0)}
+      100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}
+    }
+
+    /* Technician emoji with soft blink */
+    .bike-emoji{font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));animation:blink 1.4s infinite}
+    @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(.96)}}
+
+    /* Soft banner */
+    .soft-banner{background:#fff8e1;border:1px solid #fde68a;color:#92400e}
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Top bar -->
+  <nav class="fixed top-0 w-full gradient-bg shadow z-40">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between h-14">
+        <div class="flex items-center gap-2 text-white">
+          <i class="fas fa-tools text-xl"></i>
+          <span class="font-bold text-xl">LocalCraft</span>
+        </div>
+        <button onclick="history.back()" class="bg-white/15 hover:bg-white/25 text-white rounded px-3 py-1.5">← Back</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 pt-20 pb-10">
+    <div class="flex items-center justify-between mb-2">
+      <h1 class="text-xl font-bold">Tracking Job…</h1>
+      <div class="flex items-center gap-2">
+        <span id="tech-name" class="text-sm text-gray-700">—</span>
+        <span class="badge badge-live">Live</span>
+      </div>
+    </div>
+    <p class="helper mb-3">We’ll auto-zoom to show both you and the technician. Route refreshes every 5s.</p>
+
+    <div id="wait-tech" class="soft-banner rounded-lg px-3 py-2 mb-2 hidden">
+      Waiting for technician location… As soon as it arrives, we’ll show their emoji and the route.
+    </div>
+
+    <div id="map" class="mb-3"></div>
+
+    <div class="grid sm:grid-cols-3 gap-3 text-sm text-gray-700">
+      <div class="p-3 bg-white rounded-lg shadow">
+        <div class="font-semibold">Customer</div>
+        <div id="cust-addr" class="truncate">—</div>
+      </div>
+      <div class="p-3 bg-white rounded-lg shadow">
+        <div class="font-semibold">Technician</div>
+        <div id="tech-addr" class="truncate">—</div>
+      </div>
+      <div class="p-3 bg-white rounded-lg shadow">
+        <div class="font-semibold">Distance (approx.)</div>
+        <div id="dist" class="truncate">—</div>
+      </div>
+    </div>
+  </main>
+
+<script>
+/* ---------- helpers ---------- */
+const num = (v)=> typeof v==='number' ? v : (v==null ? null : parseFloat(v));
+function getParam(k){ return new URL(location.href).searchParams.get(k); }
+function kmHaversine(a1,o1,a2,o2){
+  const R=6371,dA=(a2-a1)*Math.PI/180,dO=(o2-o1)*Math.PI/180;
+  const x=Math.sin(dA/2)**2+Math.cos(a1*Math.PI/180)*Math.cos(a2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+async function reverseGeocode(lat,lng){
+  try{
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+    const j = await r.json(); const a = j.address||{};
+    const parts=[a.road,a.suburb,a.village,a.town,a.city,a.state,a.postcode].filter(Boolean);
+    return parts.join(', ') || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }catch{ return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+}
+function latLngFromUser(user){
+  if (typeof user?.latitude === 'number' && typeof user?.longitude === 'number') return [user.latitude, user.longitude];
+  if (user?.lat!=null && user?.lng!=null) return [num(user.lat), num(user.lng)];
+  if (user?.location && typeof user.location === 'string' && user.location.includes(',')){
+    const [la,lo] = user.location.split(',').map(s=>parseFloat(s.trim()));
+    if(!isNaN(la)&&!isNaN(lo)) return [la,lo];
+  }
+  return null;
+}
+function latLngFromBooking(b){
+  let cLat = num(b.customerLat ?? b.customerLatitude), cLng = num(b.customerLng ?? b.customerLongitude);
+  if ((cLat==null || cLng==null) && typeof b.customerLocation === 'string' && b.customerLocation.includes(',')) {
+    const [la,lo] = b.customerLocation.split(',').map(s=>parseFloat(s.trim()));
+    cLat = num(la); cLng = num(lo);
+  }
+  let tLat = num(b.technicianLat ?? b.techLat ?? b.technicianLatitude), tLng = num(b.technicianLng ?? b.techLng ?? b.technicianLongitude);
+  if ((tLat==null || tLng==null) && typeof b.technicianLocation === 'string' && b.technicianLocation.includes(',')) {
+    const [la,lo] = b.technicianLocation.split(',').map(s=>parseFloat(s.trim()));
+    tLat = num(la); tLng = num(lo);
+  }
+  return { cust: (cLat!=null&&cLng!=null) ? [cLat,cLng] : null, tech: (tLat!=null&&tLng!=null) ? [tLat,tLng] : null };
+}
+
+/* ---------- state ---------- */
+const jobId = getParam('jobId') || getParam('id');
+let map, custMarker, techMarker, routeLine, osrmLine;
+let firstFit = true;
+let pollTimer = null;
+let sse = null;
+
+const customerIcon = L.divIcon({ className:'', html:'<div class="pulse-dot"></div>', iconSize:[18,18], iconAnchor:[9,9] });
+const techIcon = L.divIcon({ className:'', html:'<div class="bike-emoji">🏍️</div>', iconSize:[28,28], iconAnchor:[14,14] });
+
+/* ---------- map ---------- */
+function initMap(){
+  if(map) return;
+  map = L.map('map', { zoomControl:true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+  map.setView([17.4,78.5], 12);
+}
+function fitBoth(a,b){
+  if(!a || !b) return;
+  const bounds = L.latLngBounds([a,b]);
+  map.fitBounds(bounds.pad(0.3), { maxZoom: 17 });
+}
+function drawStraight(a,b){
+  if(routeLine) routeLine.remove();
+  routeLine = L.polyline([a,b], { weight:4, opacity:.9 }).addTo(map);
+}
+async function drawRoadRoute(a,b){
+  try{
+    const url = `https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}?overview=full&geometries=geojson`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const coords = j?.routes?.[0]?.geometry?.coordinates;
+    if(!coords) throw 0;
+    const latlngs = coords.map(([lon,lat]) => [lat,lon]);
+    if(osrmLine) osrmLine.remove();
+    osrmLine = L.polyline(latlngs, { weight:5, opacity:.85 }).addTo(map);
+  }catch{ drawStraight(a,b); }
+}
+
+/* ---------- API calls ---------- */
+async function fetchBooking(){
+  const r = await fetch(`/api/bookings/${encodeURIComponent(jobId)}`, { credentials:'include', cache:'no-store' });
+  if(!r.ok) throw new Error('booking not found');
+  return r.json();
+}
+async function fetchTechByIdAny(techId){
+  const paths = [
+    `/api/technicians/${encodeURIComponent(techId)}`,
+    `/technicians/${encodeURIComponent(techId)}`,
+    `/api/users/${encodeURIComponent(techId)}`,
+    `/users/${encodeURIComponent(techId)}`
+  ];
+  for (const p of paths){
+    try{ const r = await fetch(p, { cache:'no-store' }); if(r.ok) return r.json(); }catch{}
+  }
+  return null;
+}
+async function fetchLatestTechLL(jobId, techId){
+  // 1) booking again (it may get updated with tech lat/lng)
+  try{
+    const b = await fetchBooking();
+    const { tech } = latLngFromBooking(b);
+    if (tech) return tech;
+  }catch{}
+
+  // 2) booking-scoped location endpoints (various shapes)
+  const candidates = [
+    `/api/bookings/${encodeURIComponent(jobId)}/location`,
+    `/api/bookings/${encodeURIComponent(jobId)}/tech/location`,
+    `/api/bookings/${encodeURIComponent(jobId)}/positions`
+  ];
+  for (const url of candidates){
+    try{
+      const r = await fetch(url, { cache:'no-store' });
+      if(!r.ok) continue;
+      const j = await r.json();
+      // Possible shapes:
+      // {lat,lng} OR {latitude,longitude} OR {tech:{lat,lng}} OR [{role:'TECH',lat,lng}, ...]
+      const pair = (obj)=> {
+        if(!obj) return null;
+        if (obj.lat!=null && obj.lng!=null) return [num(obj.lat), num(obj.lng)];
+        if (obj.latitude!=null && obj.longitude!=null) return [num(obj.latitude), num(obj.longitude)];
+        if (typeof obj.location === 'string' && obj.location.includes(',')) {
+          const [la,lo] = obj.location.split(',').map(s=>parseFloat(s.trim()));
+          if(!isNaN(la)&&!isNaN(lo)) return [la,lo];
+        }
+        return null;
+      };
+      let ll = pair(j?.tech) || pair(j);
+      if(!ll && Array.isArray(j)) {
+        const rec = j.find(e => (e.role==='TECH'||e.role==='TECHNICIAN'));
+        ll = pair(rec);
+      }
+      if(ll && ll[0]!=null && ll[1]!=null) return ll;
+    }catch{}
+  }
+
+  // 3) fallback: fetch technician entity
+  if(techId){
+    const t = await fetchTechByIdAny(techId);
+    const ll = latLngFromUser(t);
+    if(ll) return ll;
+  }
+  return null;
+}
+
+/* ---------- live update loop ---------- */
+async function hydrateInitial(){
+  initMap();
+  const b = await fetchBooking();
+
+  // customer
+  const { cust: custLL0, tech: techLL0 } = latLngFromBooking(b);
+  if(!custLL0){ alert('This job does not have a customer location yet.'); return; }
+
+  // markers
+  if(custMarker) custMarker.remove();
+  custMarker = L.marker(custLL0, { icon: customerIcon, title:'You', zIndexOffset: 500 }).addTo(map).bindPopup('You');
+
+  const techId = b.technician?.id ?? b.technicianId ?? b.techId ?? null;
+
+  let techLL = techLL0, techObj = null;
+  if(!techLL && techId){
+    techObj = await fetchTechByIdAny(techId);
+    techLL = latLngFromUser(techObj);
+  }
+
+  if(techLL){
+    if(techMarker) techMarker.remove();
+    techMarker = L.marker(techLL, { icon: techIcon, title:'Technician', zIndexOffset: 400 }).addTo(map)
+                  .bindPopup(`${(techObj?.firstName||'')+' '+(techObj?.lastName||'')}`.trim()||'Technician');
+  }else{
+    document.getElementById('wait-tech').classList.remove('hidden');
+  }
+
+  document.getElementById('tech-name').textContent =
+    ((techObj?.firstName||'')+' '+(techObj?.lastName||'')).trim()
+    || (b.technician?.name || 'Technician');
+
+  document.getElementById('cust-addr').textContent = await reverseGeocode(custLL0[0], custLL0[1]);
+  if(techLL) document.getElementById('tech-addr').textContent = await reverseGeocode(techLL[0], techLL[1]);
+
+  if(techLL){
+    document.getElementById('dist').textContent =
+      kmHaversine(custLL0[0],custLL0[1],techLL[0],techLL[1]).toFixed(2) + ' km';
+    await drawRoadRoute(custLL0, techLL);
+    fitBoth(custLL0, techLL);
+  }else{
+    map.setView(custLL0, 15);
+  }
+
+  startLive(custLL0, techId);
+}
+
+function startLive(custLL, techId){
+  // SSE (preferred if backend emits)
+  try{
+    sse = new EventSource(`/api/bookings/${encodeURIComponent(jobId)}/stream`);
+    sse.addEventListener('location', async (ev) => {
+      const d = JSON.parse(ev.data);
+      const lat = num(d.lat ?? d.latitude), lng = num(d.lng ?? d.longitude);
+      if(lat==null || lng==null) return;
+
+      if(d.sender === 'TECH' || d.sender === 'TECHNICIAN'){
+        const t = [lat,lng];
+        if(!techMarker){
+          techMarker = L.marker(t, { icon: techIcon, title:'Technician', zIndexOffset: 400 }).addTo(map).bindPopup('Technician');
+          document.getElementById('wait-tech').classList.add('hidden');
+        }else{
+          techMarker.setLatLng(t);
+        }
+        document.getElementById('tech-addr').textContent = await reverseGeocode(t[0],t[1]);
+        document.getElementById('dist').textContent = kmHaversine(t[0],t[1],custLL[0],custLL[1]).toFixed(2) + ' km';
+        await drawRoadRoute(custLL, t);
+        if(firstFit){ fitBoth(custLL, t); firstFit=false; } else { map.panTo(t, { animate:true, duration:.6 }); }
+      }
+
+      if(d.sender === 'CUSTOMER'){
+        const c = [lat,lng];
+        if(custMarker){ custMarker.setLatLng(c); } else {
+          custMarker = L.marker(c, { icon: customerIcon, title:'You', zIndexOffset: 500 }).addTo(map).bindPopup('You');
+        }
+        if(techMarker){
+          await drawRoadRoute(c, [techMarker.getLatLng().lat, techMarker.getLatLng().lng]);
+        }
+      }
+    });
+    sse.onerror = () => { try{sse.close();}catch{}; sse=null; };
+  }catch(_){}
+
+  // 5s polling safety net (also discovers tech when SSE absent)
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try{
+      const ll = await fetchLatestTechLL(jobId, techId);
+      if(!ll) return;
+
+      if(!techMarker){
+        techMarker = L.marker(ll, { icon: techIcon, title:'Technician', zIndexOffset: 400 }).addTo(map).bindPopup('Technician');
+        document.getElementById('wait-tech').classList.add('hidden');
+      }else{
+        techMarker.setLatLng(ll);
+      }
+
+      document.getElementById('tech-addr').textContent = await reverseGeocode(ll[0],ll[1]);
+      document.getElementById('dist').textContent = kmHaversine(ll[0],ll[1],custLL[0],custLL[1]).toFixed(2) + ' km';
+      await drawRoadRoute(custLL, ll);
+      if(firstFit){ fitBoth(custLL, ll); firstFit=false; }
+    }catch(_){}
+  }, 5000);
+}
+
+/* ---------- boot ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  if(!jobId){ alert('No jobId provided.'); return; }
+  try{ await hydrateInitial(); }
+  catch(e){ console.error(e); alert('Could not load this job. Please open it again from My Requests.'); }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LocalCraft - Technician Login</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Poppins', sans-serif; }
+body, html { margin: 0; padding: 0; height: 100%; }
+
+.left-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    clip-path: ellipse(85% 100% at 0% 50%);
+}
+.logo-icon { display: inline-block; padding: 20px; border-radius: 50%; margin-bottom: 30px; animation: pulse 3s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.05);} }
+.brand-title { font-size: 5rem; font-weight: 600; background: linear-gradient(45deg,#fff,#f0f8ff,#e6e6fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align:center; margin-bottom:10px; letter-spacing:-1px; }
+.brand-tagline { font-size: 1rem; font-style: italic; opacity: 0.9; text-align:center; }
+
+.right-panel { display: flex; justify-content: center; align-items: center; }
+.form-container { width: 100%; max-width: 400px; padding: 20px; }
+
+#step-details { max-height: 80vh; overflow-y: auto; padding-right: 10px; }
+
+.form-container input, .form-container select, .form-container textarea { width: 100%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; background: #f0f4f8; }
+.form-container input:focus, .form-container select:focus, .form-container textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102,126,234,0.5); }
+button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: 500; }
+button:hover { background: #564fc6; }
+.error { color: red; font-size: 0.85rem; margin-top: 3px; }
+.message { color: #ff4d4d; font-size: 0.9rem; margin: 5px 0; font-weight: 500; }
+
+/* small helper to show resolved location */
+.location-info { font-size: 0.9rem; color: #333; margin-top: 6px; }
+
+/* OTP styles */
+.otp-container { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.otp-box { width: 45px; height: 45px; text-align: center; font-size: 1.5rem; border-radius: 6px; border: 1px solid #ccc; background: #f0f4f8; }
+
+.hidden { display: none; }
+.resend-anchor { text-decoration: underline; color: #555; cursor: not-allowed; display: block; margin-bottom: 5px; }
+.resend-anchor.active { color: #667eea; cursor: pointer; }
+.timer-text { font-size: 0.85rem; color: #333; margin-bottom: 10px; }
+.shake { animation: shake 0.3s; }
+@keyframes shake { 0% {transform: translateX(0);} 25% {transform: translateX(-5px);} 50% {transform: translateX(5px);} 75% {transform: translateX(-5px);} 100% {transform: translateX(0);} }
+.password-condition { font-size: 0.85rem; margin: 3px 0; display: flex; align-items: center; }
+.password-condition i { margin-right: 5px; }
+</style>
+</head>
+<body>
+
+<div class="flex flex-col md:flex-row h-screen">
+    <div class="left-panel md:w-2/3 w-full h-64 md:h-full flex justify-center items-center flex-col">
+        <div class="text-center">
+            <div class="logo-icon"><i class="fas fa-tools text-white text-5xl md:text-6xl"></i></div>
+            <h1 class="brand-title">LocalCraft</h1>
+            <p class="brand-tagline">Find Trusted Local Workers Near You</p>
+        </div>
+    </div>
+
+    <div class="right-panel md:w-1/3 w-full h-full p-6 overflow-y-auto">
+        <div class="form-container">
+
+            <div id="step-phone">
+                <h2 class="text-xl font-bold mb-4 text-center">Enter Your Mobile Number</h2>
+                <input type="tel" id="phone" maxlength="10" placeholder="10-digit Mobile Number" onkeypress="if(event.key==='Enter'){sendOTP();}">
+                <p id="error-phone" class="error hidden">Please enter a valid 10-digit phone number.</p>
+                <p id="phone-exist" class="message hidden">The mobile number you entered is already registered.</p>
+                <button onclick="sendOTP()">Enter</button>
+            </div>
+
+            <div id="step-otp" class="hidden">
+                <h2 class="text-xl font-bold mb-4 text-center">Enter OTP</h2>
+                <div class="otp-container">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,0)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,1)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,2)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,3)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,4)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,5)">
+                </div>
+                <a id="resend-anchor" class="resend-anchor">Resend OTP</a>
+                <p id="timer-text" class="timer-text">You can resend the OTP after 02:00</p>
+                <p id="error-otp" class="error hidden">Invalid OTP. Please try again.</p>
+                <button onclick="verifyOTP()">Enter</button>
+            </div>
+
+            <div id="step-details" class="hidden">
+                <h2 class="text-xl font-bold mb-4 text-center">Create Technician Account</h2>
+                <input type="text" id="firstName" placeholder="First Name" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                <p id="error-firstName" class="error hidden">First Name is required.</p>
+                <input type="text" id="lastName" placeholder="Last Name" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                <p id="error-lastName" class="error hidden">Last Name is required.</p>
+                <input type="email" id="email" placeholder="Professional Email" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                <p id="error-email" class="error hidden">Valid Email is required.</p>
+                <input type="password" id="password" placeholder="Password" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                <div id="password-conditions">
+                    <div class="password-condition" id="char-condition"><i class="fas fa-times text-red-500"></i> Minimum 8 characters</div>
+                    <div class="password-condition" id="upper-condition"><i class="fas fa-times text-red-500"></i> At least 1 uppercase letter</div>
+                    <div class="password-condition" id="digit-condition"><i class="fas fa-times text-red-500"></i> At least 1 digit</div>
+                    <div class="password-condition" id="special-condition"><i class="fas fa-times text-red-500"></i> At least 1 special character</div>
+                </div>
+                <select id="profession" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                    <option value="">Select Profession</option>
+                    <option value="Electrician">Electrician</option>
+                    <option value="Plumber">Plumber</option>
+                    <option value="Carpenter">Carpenter</option>
+                    <option value="Painter">Painter</option>
+                    <option value="Mechanic">Mechanic</option>
+                    <option value="Cleaner">Cleaner</option>
+                    <option value="Mason">Mason</option>
+                    <option value="Lawn Mowing">Lawn Mowing</option>
+                </select>
+                <p id="error-profession" class="error hidden">Profession is required.</p>
+                <textarea id="specialization" placeholder="Specialization / Description" rows="3" onkeypress="if(event.key==='Enter'){submitDetails();}"></textarea>
+                <p id="error-specialization" class="error hidden">Specialization/Description is required.</p>
+                <input type="number" id="experience" placeholder="Years of Experience" min="0" onkeypress="if(event.key==='Enter'){submitDetails();}">
+                <p id="error-experience" class="error hidden">Experience is required.</p>
+                <label class="mt-2">Upload Your Photo (Required):</label>
+                <input type="file" id="photo" accept="image/*">
+                <p id="error-photo" class="error hidden">Photo is required.</p>
+                <label class="mt-2">Upload Workshop Photo (Optional):</label>
+                <input type="file" id="shopPhoto" accept="image/*">
+
+                <!-- *** Hidden fields for location data (added) *** -->
+                <input type="hidden" id="location" name="location">
+                <input type="hidden" id="city" name="city">
+                <input type="hidden" id="postalCode" name="postalCode">
+
+                <!-- show captured location (user can see before submit) -->
+                <p id="location-info" class="location-info hidden"></p>
+
+                <button onclick="submitDetails()">Create Account</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+let otpTimer, timeLeft = 120;
+const anchor = document.getElementById('resend-anchor');
+const timerText = document.getElementById('timer-text');
+let currentPhone = "";
+
+// Step 1: Send OTP
+function sendOTP(){
+    const phone = document.getElementById('phone').value.trim();
+    const errorDiv = document.getElementById('error-phone');
+    const phoneExistDiv = document.getElementById('phone-exist');
+    if(!/^\d{10}$/.test(phone)){ errorDiv.classList.remove('hidden'); return; }
+    errorDiv.classList.add('hidden'); phoneExistDiv.classList.add('hidden');
+    currentPhone = phone;
+    fetch(`/otp/send?phone=${phone}`, { method: "POST" })
+        .then(res => res.text())
+        .then(result => {
+            if(result === "exists"){ phoneExistDiv.classList.remove('hidden'); } 
+            else if(result === "success"){ 
+                document.getElementById('step-phone').classList.add('hidden'); 
+                document.getElementById('step-otp').classList.remove('hidden'); 
+                startOTPTimer(); 
+            } 
+            else { errorDiv.innerText = "Error sending OTP."; errorDiv.classList.remove('hidden'); }
+        }).catch(err => { console.error(err); alert("Server error while sending OTP."); });
+}
+
+// OTP Timer
+function startOTPTimer(){
+    timeLeft = 120; anchor.classList.remove('active'); timerText.innerText = `You can resend the OTP after 02:00`;
+    otpTimer = setInterval(()=>{
+        timeLeft--; 
+        let minutes = String(Math.floor(timeLeft/60)).padStart(2,'0'); 
+        let seconds = String(timeLeft%60).padStart(2,'0');
+        timerText.innerText = `You can resend the OTP after ${minutes}:${seconds}`;
+        if(timeLeft<=0){ 
+            clearInterval(otpTimer); 
+            anchor.classList.add('active'); 
+            timerText.innerText = 'You can resend the OTP now.'; 
+            document.querySelectorAll('.otp-box').forEach(b=>b.value=''); 
+        }
+    },1000);
+}
+anchor.addEventListener('click', ()=>{ 
+    if(anchor.classList.contains('active')){ sendOTP(); document.querySelectorAll('.otp-box').forEach(b=>b.value=''); }
+});
+
+// OTP Input Move Next
+function moveNext(box,index){ 
+    const boxes = document.querySelectorAll('.otp-box'); 
+    if(box.value.length===1 && index<boxes.length-1){ boxes[index+1].focus(); }
+}
+
+// Step 2: Verify OTP
+function verifyOTP(){
+    const boxes = document.querySelectorAll('.otp-box');
+    const otp = Array.from(boxes).map(b=>b.value).join('');
+    const errorDiv = document.getElementById('error-otp');
+    fetch(`/otp/verify?otpInput=${otp}&phone=${currentPhone}`, { method: "POST" })
+        .then(res => res.text())
+        .then(result => {
+            if(result === "success"){ 
+                errorDiv.classList.add('hidden'); 
+                clearInterval(otpTimer); 
+                document.getElementById('step-otp').classList.add('hidden'); 
+                document.getElementById('step-details').classList.remove('hidden'); 
+                document.getElementById('step-details').scrollIntoView({behavior:'smooth'});
+
+                // -> *** Start geolocation capture immediately after showing details ***
+                requestAndFillLocation();
+            } 
+            else { 
+                errorDiv.classList.remove('hidden'); 
+                document.querySelector('.otp-container').classList.add('shake'); 
+                setTimeout(()=>document.querySelector('.otp-container').classList.remove('shake'),300); 
+            }
+        }).catch(err => { console.error(err); alert("Server error while verifying OTP."); });
+}
+
+// Password Validation
+document.getElementById('password').addEventListener('input',function(){
+    const val = this.value;
+    document.getElementById('char-condition').querySelector('i').className = val.length>=8?'fas fa-check text-green-500':'fas fa-times text-red-500';
+    document.getElementById('upper-condition').querySelector('i').className = /[A-Z]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+    document.getElementById('digit-condition').querySelector('i').className = /\d/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+    document.getElementById('special-condition').querySelector('i').className = /[!@#$%^&*]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+});
+
+// =========================
+// GEOLOCATION + reverse geocode
+// =========================
+function requestAndFillLocation(){
+    // reset display
+    const info = document.getElementById('location-info');
+    info.classList.add('hidden');
+    info.innerText = '';
+
+    if(!navigator.geolocation){
+        alert('Geolocation not supported by this browser. Please enter location manually (not implemented).');
+        return;
+    }
+
+    // ask permission and get coordinates
+    navigator.geolocation.getCurrentPosition(
+        position => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            // fill hidden field
+            document.getElementById('location').value = `${lat},${lon}`;
+
+            // try reverse geocoding (OpenStreetMap Nominatim)
+            reverseGeocode(lat, lon);
+        },
+        error => {
+            console.warn('Geolocation error', error);
+            if(error.code === error.PERMISSION_DENIED){
+                alert('Location access denied. Please allow location permission to continue signup.');
+            } else {
+                alert('Unable to fetch location. Please try again or check your device settings.');
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+async function reverseGeocode(lat, lon){
+    const info = document.getElementById('location-info');
+    try {
+        // Note: Nominatim is free public service. For production please use proper key or paid service.
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' }});
+        if(!resp.ok) throw new Error('Reverse geocode failed: ' + resp.status);
+        const data = await resp.json();
+        const addr = data.address || {};
+        const city = addr.city || addr.town || addr.village || addr.county || '';
+        const postcode = addr.postcode || '';
+        // fill hidden inputs
+        document.getElementById('city').value = city;
+        document.getElementById('postalCode').value = postcode;
+
+        // show to user
+        let display = '';
+        if(city) display += city;
+        if(postcode) display += (display ? ' — ' : '') + postcode;
+        if(display) {
+            info.innerText = 'Captured location: ' + display;
+            info.classList.remove('hidden');
+        } else {
+            info.innerText = 'Location captured (lat/lon).';
+            info.classList.remove('hidden');
+        }
+
+        // store for After Login page (so other pages can read)
+        try {
+            localStorage.setItem('user_location', `${lat},${lon}`);
+            localStorage.setItem('user_city', city);
+            localStorage.setItem('user_postalCode', postcode);
+        } catch(e){ /* ignore storage errors */ }
+    } catch (err) {
+        console.error('reverseGeocode error', err);
+        info.innerText = 'Location captured (lat/lon). City lookup failed.';
+        info.classList.remove('hidden');
+        // still store lat/lon only
+        try {
+            localStorage.setItem('user_location', `${lat},${lon}`);
+        } catch(e){}
+    }
+}
+
+// Step 3: Submit Details
+function submitDetails(){
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const profession = document.getElementById('profession').value;
+    const specialization = document.getElementById('specialization').value.trim();
+    const experience = document.getElementById('experience').value.trim();
+    const photo = document.getElementById('photo').files[0];
+    const shopPhoto = document.getElementById('shopPhoto').files[0];
+
+    let valid = true;
+    if(!firstName){ document.getElementById('error-firstName').classList.remove('hidden'); valid=false; } else { document.getElementById('error-firstName').classList.add('hidden'); }
+    if(!lastName){ document.getElementById('error-lastName').classList.remove('hidden'); valid=false; } else { document.getElementById('error-lastName').classList.add('hidden'); }
+    if(!/\S+@\S+\.\S+/.test(email)){ document.getElementById('error-email').classList.remove('hidden'); valid=false; } else { document.getElementById('error-email').classList.add('hidden'); }
+    const conditions = ['char-condition','upper-condition','digit-condition','special-condition'];
+    if(!conditions.every(id=>document.getElementById(id).querySelector('i').classList.contains('text-green-500'))){ valid=false; alert("Password does not meet requirements"); }
+    if(!profession){ document.getElementById('error-profession').classList.remove('hidden'); valid=false; } else { document.getElementById('error-profession').classList.add('hidden'); }
+    if(!specialization){ document.getElementById('error-specialization').classList.remove('hidden'); valid=false; } else { document.getElementById('error-specialization').classList.add('hidden'); }
+    if(!experience){ document.getElementById('error-experience').classList.remove('hidden'); valid=false; } else { document.getElementById('error-experience').classList.add('hidden'); }
+    if(!photo){ document.getElementById('error-photo').classList.remove('hidden'); valid=false; } else { document.getElementById('error-photo').classList.add('hidden'); }
+
+    // location must be captured
+    const locVal = document.getElementById('location').value;
+    if(!locVal){
+        alert("Location is required. Please allow location access when prompted.");
+        return;
+    }
+
+    if(!valid){ return; }
+
+    const formData = new FormData();
+    formData.append("firstName", firstName); 
+    formData.append("lastName", lastName); 
+    formData.append("email", email); 
+    formData.append("password", password);
+    formData.append("phone", currentPhone); 
+    formData.append("profession", profession); 
+    formData.append("specialization", specialization); 
+    formData.append("experience", experience); 
+    formData.append("photo", photo); 
+    if(shopPhoto) formData.append("shopPhoto", shopPhoto);
+
+    // append location fields
+    formData.append("location", document.getElementById('location').value);
+    formData.append("city", document.getElementById('city').value || '');
+    formData.append("postalCode", document.getElementById('postalCode').value || '');
+
+    fetch("/technicians/signup", { method: "POST", body: formData })
+        .then(res => res.text())
+        .then(msg => {
+            if(msg.toLowerCase().includes("success")){
+                // keep city/postal saved for after-login display
+                try {
+                    localStorage.setItem('user_city', document.getElementById('city').value || '');
+                    localStorage.setItem('user_postalCode', document.getElementById('postalCode').value || '');
+                } catch(e){}
+                alert("Account created successfully!");
+                window.location.href = "/";
+            } else {
+                alert("Error: "+msg);
+            }
+        })
+        .catch(err => { console.error(err); alert("Server error while creating account."); });
+}
+</script>
+
+</body>
+</html>

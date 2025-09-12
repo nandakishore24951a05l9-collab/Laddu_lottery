@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalCraft - Enhanced Professional Service Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body class="smooth-scroll bg-gray-50">
+    <!-- Navigation Bar -->
+  <!-- Navigation Bar -->
+<nav class="fixed top-0 w-full gradient-bg shadow-lg z-50">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-4">
+                <i class="fas fa-tools text-white text-2xl"></i>
+                <div class="flex flex-col">
+                    <span class="text-2xl font-bold text-white">LocalCraft</span>
+                    <span id="user-location" class="text-sm text-white opacity-80">Fetching location...</span>
+                </div>
+            </div>
+            <div class="hidden md:flex space-x-8 items-center">
+                <a href="#home" class="nav-link text-white hover:text-gray-200 font-medium transition">Home</a>
+                <a href="#about" class="nav-link text-white hover:text-gray-200 font-medium transition">About</a>
+                <a href="#services" class="nav-link text-white hover:text-gray-200 font-medium transition">Services</a>
+                <!-- <a href="#how-it-works" class="nav-link text-white hover:text-gray-200 font-medium transition">How It Works</a> -->
+                <a href="#reviews" class="nav-link text-white hover:text-gray-200 font-medium transition">Reviews</a>
+                <a href="#help" class="nav-link text-white hover:text-gray-200 font-medium transition">Help</a>
+                
+                <a href="#profile" class="nav-link text-white hover:text-gray-200 font-medium transition">
+                    <i class="fas fa-user mr-1"></i>
+                </a>
+                <!-- ✅ Added: My Requests (opens customer status page) -->
+                <a href="/my-requests" class="nav-link text-white hover:text-gray-200 font-medium transition">
+                    <i class="fas fa-list-check mr-1"></i>My Requests
+                </a>
+                <!-- <a href="#" onclick="localLogout(); return false;" class="text-white hover:text-gray-200">Logout</a> -->
+
+            </div>
+            <div class="md:hidden">
+                <button id="mobile-menu-btn" class="text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-purple-800 border-t border-purple-600">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <!-- Mobile User Location -->
+            <span id="mobile-user-location" class="block text-white px-3 py-2 opacity-80">Fetching location...</span>
+
+            <a href="#home" class="nav-link block px-3 py-2 text-white">Home</a>
+            <a href="#about" class="nav-link block px-3 py-2 text-white">About</a>
+            <a href="#services" class="nav-link block px-3 py-2 text-white">Services</a>
+            <a href="#how-it-works" class="nav-link block px-3 py-2 text-white">How It Works</a>
+            <a href="#reviews" class="nav-link block px-3 py-2 text-white">Reviews</a>
+            <a href="#help" class="nav-link block px-3 py-2 text-white">Help</a>
+            <a href="#profile" class="nav-link block px-3 py-2 text-white">
+                <i class="fas fa-user mr-1"></i>
+            </a>
+            <!-- ✅ Added: My Requests in mobile menu -->
+            <a href="/my-requests" class="nav-link block px-3 py-2 text-white">
+                <i class="fas fa-list-check mr-1"></i>My Requests
+            </a>
+        </div>
+    </div>
+</nav>
+
+
+
+    <!-- Home Section -->
+    <section id="home" class="gradient-bg text-white min-h-screen flex items-center">
+        <div class="max-w-7xl mx-auto px-4 py-20">
+            <div class="text-center mb-16">
+                <h1 class="text-5xl md:text-6xl font-bold mb-6">Find Trusted Local Workers Near You</h1>
+                <p class="text-xl mb-8 max-w-3xl mx-auto opacity-90">Now in the area! Connect with verified carpenters, plumbers, electricians, and more in your neighborhood.</p>
+                <button onclick="document.getElementById('services').scrollIntoView({behavior: 'smooth'})" class="bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition duration-300 text-lg">
+                    <i class="fas fa-search mr-2"></i>Find Services Now
+                </button>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 mt-16">
+                <div class="text-center">
+                    <div class="bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-search text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Search & Find</h3>
+                    <p class="opacity-90">Browse through verified local service providers</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-handshake text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Connect & Discuss</h3>
+                    <p class="opacity-90">Get in touch and discuss your project needs</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-white bg-opacity-20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check-circle text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Get It Done</h3>
+                    <p class="opacity-90">Enjoy professional service and quality work</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="section-padding bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">About LocalCraft</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Moving is time-consuming and overwhelming, especially when you need fast-quality services or fix work in a new area. We bridge the gap between homeowners and skilled local service providers, making it easy to find trusted professionals for any job.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-12 mb-16">
+                <div class="text-center">
+                    <div class="bg-purple-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-shield-alt text-purple-600 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4">Verified Professionals</h3>
+                    <p class="text-gray-600">All service providers undergo thorough background checks and credential verification before joining our platform.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-clock text-purple-600 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4">24/7 Availability</h3>
+                    <p class="text-gray-600">Find local expertise and community knowledge to make your home improvements and repairs hassle-free.</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-heart text-purple-600 text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-4">Community First</h3>
+                    <p class="text-gray-600">Supporting local businesses and building stronger communities by connecting neighbors with skilled professionals.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    
+    <!-- Services Section -->
+<section id="services" class="section-padding bg-gray-100">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-gray-800 mb-6">Our Services</h2>
+      <p class="text-xl text-gray-600">Expert professionals for all your home and business needs</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+      <!-- Carpenter -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/carpenter} + '?service=carpenter\''">
+        <div class="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-hammer text-purple-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Carpenter</h3>
+        <p class="text-gray-600 text-sm">Custom furniture, repairs, installations</p>
+      </div>
+
+      <!-- Plumber -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/plumber} + '?service=plumber\''">
+        <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-wrench text-blue-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Plumber</h3>
+        <p class="text-gray-600 text-sm">Pipe repairs, installations, maintenance</p>
+      </div>
+
+      <!-- Mechanic -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/mechanic} + '?service=mechanic\''">
+        <div class="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-car text-red-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Mechanic</h3>
+        <p class="text-gray-600 text-sm">Auto repairs, maintenance, diagnostics</p>
+      </div>
+
+      <!-- Electrician -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/electrician} + '?service=electrician\''">
+        <div class="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-bolt text-yellow-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Electrician</h3>
+        <p class="text-gray-600 text-sm">Wiring, installations, electrical repairs</p>
+      </div>
+
+      <!-- Painter -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/painter} + '?service=painter\''">
+        <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-paint-roller text-green-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Painter</h3>
+        <p class="text-gray-600 text-sm">Interior, exterior painting, finishes</p>
+      </div>
+
+      <!-- Lawn Mowing -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/lawnmowing} + '?service=lawnmowing\''">
+        <div class="bg-emerald-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-leaf text-emerald-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Lawn Mowing</h3>
+        <p class="text-gray-600 text-sm">Landscaping, maintenance, cleanup</p>
+      </div>
+
+      <!-- Mason -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/mason} + '?service=mason\''">
+        <div class="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-trowel text-orange-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Mason</h3>
+        <p class="text-gray-600 text-sm">Brickwork, stonework, construction</p>
+      </div>
+
+      <!-- Cleaner -->
+      <div class="service-card p-6 rounded-xl shadow-lg text-center cursor-pointer"
+           th:onclick="'window.location.href=\'' + @{/cleaner} + '?service=cleaner\''">
+        <div class="bg-pink-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-broom text-pink-600 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Cleaner</h3>
+        <p class="text-gray-600 text-sm">House cleaning, office cleaning, deep cleaning</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+    <!-- Service Workers Section -->
+    <section id="service-workers" class="section-padding bg-white section-hidden">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center mb-8">
+                <button onclick="goBackToServices()" class="text-purple-600 hover:text-purple-800 mr-4">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <h3 id="service-title" class="text-3xl font-bold text-gray-800">Service Providers</h3>
+            </div>
+            <div class="mb-6 flex flex-col md:flex-row gap-4">
+                <input type="text" id="worker-search" placeholder="Search workers..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                <select id="sort-dropdown" class="p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                    <option value="rating">Sort by Rating</option>
+                    <option value="experience">Sort by Experience</option>
+                </select>
+            </div>
+            <div id="workers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Workers will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="section-padding bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">How It Works</h2>
+                <p class="text-xl text-gray-600">Simple steps to find and hire trusted professionals</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-12">
+                <div class="text-center">
+                    <div class="step-circle">1</div>
+                    <h3 class="text-xl font-semibold mb-4">Select Your Service</h3>
+                    <p class="text-gray-600">Choose from our wide range of professional services. Browse categories and find exactly what you need.</p>
+                </div>
+                <div class="text-center">
+                    <div class="step-circle">2</div>
+                    <h3 class="text-xl font-semibold mb-4">View Nearby Workers</h3>
+                    <p class="text-gray-600">Browse verified professionals in your area with ratings, reviews, and portfolios to make the best choice.</p>
+                </div>
+                <div class="text-center">
+                    <div class="step-circle">3</div>
+                    <h3 class="text-xl font-semibold mb-4">Contact & Hire</h3>
+                    <p class="text-gray-600">Connect directly with your chosen professional and arrange the service that meets your needs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reviews Section -->
+    <section id="reviews" class="section-padding bg-gray-100">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">What Our Customers Say</h2>
+                <p class="text-xl text-gray-600">Real experiences from people who found their perfect service professional</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 mb-16">
+                <div class="testimonial-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Sarah Mitchell</h4>
+                            <div class="star-rating">
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-600">"I am a doctor who decided to trust them. They set me up with someone within 10 minutes, and Michael came and completed everything very professionally and professionally went home that I would recommend as we discussed."</p>
+                </div>
+                <div class="testimonial-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">James Smith</h4>
+                            <div class="star-rating">
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-600">"I found an experienced plumber through LocalCraft and I fixed the plumbing under the sink. The service was excellent, cost me much the standard, and I got a great deal!"</p>
+                </div>
+                <div class="testimonial-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">Amanda Lee</h4>
+                            <div class="star-rating">
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                                <i class="fas fa-star star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-600">"Great! I didn't know a LocalCraft existed for my electrical needs I was waiting to get help. Now that the problem has been solved, I feel my home is safe to live again."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Help Section -->
+    <section id="help" class="section-padding bg-white">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">Need Help?</h2>
+                <p class="text-xl text-gray-600">We're here to assist you every step of the way</p>
+            </div>
+            <div class="grid md:grid-cols-4 gap-8 mb-16">
+                <div class="text-center">
+                    <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-question-circle text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">FAQ</h3>
+                    <p class="text-gray-600 text-sm">Find answers to common questions</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-comments text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Live Chat</h3>
+                    <p class="text-gray-600 text-sm">Chat with our support team</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-phone text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Call</h3>
+                    <p class="text-gray-600 text-sm">1-800-LOCAL-CRAFT</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-envelope text-orange-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Email</h3>
+                    <p class="text-gray-600 text-sm">support@localcraft.com</p>
+                </div>
+            </div>
+        </div>
+    </section>
+   <!-- Profile Section -->
+    <!-- Profile Section -->
+
+   <!-- Profile Section -->
+<!-- Profile Section -->
+<section id="profile" class="section-padding bg-gray-100">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-gray-800 mb-6">My Profile</h2>
+      <p class="text-xl text-gray-600">Manage your account information</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-8">
+      <!-- Avatar + Name -->
+      <div class="flex items-center mb-8">
+        <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mr-6">
+          <i class="fas fa-user text-purple-600 text-3xl"></i>
+        </div>
+        <div>
+          <h3 class="text-2xl font-bold text-gray-800" id="profile-display-name">Loading...</h3>
+          <p class="text-gray-600" id="profile-role">LocalCraft Customer</p>
+        </div>
+      </div>
+
+      <!-- Display View -->
+      <div id="profile-display" class="space-y-6">
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">First Name</label>
+            <div class="p-3 bg-gray-50 rounded-lg" id="display-firstname">Loading...</div>
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Last Name</label>
+            <div class="p-3 bg-gray-50 rounded-lg" id="display-lastname">Loading...</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
+          <div class="p-3 bg-gray-50 rounded-lg" id="display-phone">Loading...</div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Location</label>
+          <div class="p-3 bg-gray-50 rounded-lg" id="display-location">Loading...</div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Email</label>
+          <div class="p-3 bg-gray-50 rounded-lg" id="display-email">Loading...</div>
+        </div>
+
+        <button onclick="editProfile()" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-300">
+          <i class="fas fa-edit mr-2"></i>Edit Profile
+        </button>
+      </div>
+
+      <!-- Edit Form -->
+      <div id="profile-edit" class="space-y-6 hidden">
+        <form id="profile-form">
+          <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">First Name</label>
+              <input type="text" id="edit-firstname" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+            </div>
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">Last Name</label>
+              <input type="text" id="edit-lastname" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
+            <input type="tel" id="edit-phone" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-medium mb-2">Location</label>
+            <input type="text" id="edit-location" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+          </div>
+
+          <div class="flex space-x-4">
+            <button type="button" onclick="cancelEdit()" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400">
+              Cancel
+            </button>
+            <button type="submit" class="flex-1 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <!-- Footer -->
+    
+    <footer class="footer-gradient text-white">
+        <div class="max-w-7xl mx-auto px-4 py-16">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-tools text-2xl mr-2"></i>
+                        <span class="text-xl font-bold">LocalCraft</span>
+                    </div>
+                    <p class="text-gray-300 mb-4">Connecting communities with trusted local professionals for all your service needs.</p>
+                    <div class="flex space-x-4">
+                        <i class="fab fa-facebook text-xl hover:text-blue-400 cursor-pointer"></i>
+                        <i class="fab fa-twitter text-xl hover:text-blue-400 cursor-pointer"></i>
+                        <i class="fab fa-instagram text-xl hover:text-pink-400 cursor-pointer"></i>
+                        <i class="fab fa-linkedin text-xl hover:text-blue-400 cursor-pointer"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Company</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#about" class="text-gray-300 hover:text-white">About Us</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Careers</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Press</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Blog</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Support</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#help" class="text-gray-300 hover:text-white">Help Center</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Safety</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Community</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Contact</h3>
+                    <ul class="space-y-2">
+                        <li class="text-gray-300"><i class="fas fa-phone mr-2"></i>1-800-LOCAL-CRAFT</li>
+                        <li class="text-gray-300"><i class="fas fa-envelope mr-2"></i>support@localcraft.com</li>
+                        <li class="text-gray-300"><i class="fas fa-map-marker-alt mr-2"></i>123 Service St, Helper City</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-600 pt-8 text-center text-gray-300">
+                <p>&copy; 2024 LocalCraft. All rights reserved. | Privacy Policy | Terms of Service</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Worker Details Section (Overlay) -->
+    <div id="worker-details" class="worker-details-section">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center mb-8">
+                <button onclick="hideWorkerDetails()" class="text-purple-600 hover:text-purple-800 mr-4">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <h2 class="text-4xl font-bold text-gray-800">Worker Details</h2>
+            </div>
+            <div id="worker-profile" class="bg-white rounded-lg shadow-lg p-8">
+                <!-- Worker profile will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Modal for Customer Address -->
+    <div id="location-modal" class="modal">
+        <div class="bg-white rounded-lg p-8 max-w-md mx-4">
+            <h3 class="text-2xl font-bold mb-4">Share Your Location</h3>
+            <p class="text-gray-600 mb-6">Please provide your location for the technician to visit:</p>
+            <form id="location-form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Street Address</label>
+                    <input type="text" id="street-address" required class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">City</label>
+                        <input type="text" id="city" required class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">ZIP Code</label>
+                        <input type="text" id="zip-code" required class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Additional Notes</label>
+                    <textarea id="location-notes" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500" placeholder="Any specific instructions..."></textarea>
+                </div>
+                <div class="flex space-x-4">
+                    <button type="button" onclick="closeLocationModal()" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
+                        Confirm Location
+                    </button>
+                </div>
+            </form>
+            <div class="mt-4 text-center">
+                <button onclick="getCurrentLocation()" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-location-arrow mr-1"></i>Use My Current Location
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technician Location Modal -->
+    <div id="technician-location-modal" class="modal">
+        <div class="bg-white rounded-lg p-8 max-w-lg mx-4">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-2">Done!</h3>
+                <p class="text-gray-600">Here's the technician's workshop location:</p>
+            </div>
+            <div id="technician-location-info" class="mb-6">
+                <!-- Technician location info will be populated -->
+            </div>
+            <div class="map-container mb-6">
+                <div class="text-center text-gray-500">
+                    <i class="fas fa-map-marker-alt text-3xl mb-2"></i>
+                    <p>Workshop Location Map</p>
+                </div>
+            </div>
+            <button onclick="closeTechnicianLocationModal()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
+                Got It
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Popup -->
+    <div id="notification-popup" class="notification-popup">
+        <div class="flex items-start">
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                <i class="fas fa-bell text-blue-600"></i>
+            </div>
+            <div class="flex-1">
+                <h4 class="font-semibold text-gray-800 mb-1">New Notification</h4>
+                <p id="notification-text" class="text-gray-600 text-sm"></p>
+            </div>
+            <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600 ml-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="chatbot-container">
+        <div class="chatbot-window" id="chatbot-window">
+            <div class="chatbot-header">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-robot mr-2"></i>
+                        <span>LocalCraft Assistant</span>
+                    </div>
+                    <button onclick="toggleChatbot()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="chatbot-messages" id="chatbot-messages">
+                <div class="message bot">
+                    <p>Hello! I'm here to help you with any questions about LocalCraft services. How can I assist you today?</p>
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <div class="flex space-x-2">
+                    <input type="text" id="chatbot-input" placeholder="Type your message..." class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                    <button onclick="sendMessage()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="chatbot-toggle" onclick="toggleChatbot()">
+            <i class="fas fa-comments"></i>
+        </div>
+    </div>
+
+   <script src="/js/user.js"></script> 
+
+</body>
+
+</html>

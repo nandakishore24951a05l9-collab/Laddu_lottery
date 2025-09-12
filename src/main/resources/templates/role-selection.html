@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalCraft - Choose Role</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        .home-container { display: flex; min-height: 100vh; }
+        .home-left {
+            width: 70%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0 50px 50px 0;
+            clip-path: ellipse(85% 100% at 0% 50%);
+        }
+        .logo-icon { display: inline-block; padding: 20px; border-radius: 50%; margin-bottom: 30px; animation: pulse 3s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.05);} }
+        .brand-title { font-size: 6rem; font-weight: 600; background: linear-gradient(45deg,#fff,#f0f8ff,#e6e6fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align:center; margin-bottom:20px; letter-spacing:-2px;}
+        .brand-tagline { font-size: 1rem; font-style: italic; opacity: 0.9; text-align:center; }
+        .home-right { width: 30%; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; }
+        .user-type-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease; margin-bottom: 1rem; }
+        .user-type-card:hover { border-color: #667eea; background: #f8fafc; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.15);}
+        @media (max-width:768px) { .home-container{flex-direction:column;} .home-left,.home-right{width:100%;} .home-left{min-height:50vh; clip-path:none; border-radius:0 0 30px 30px;} .brand-title{font-size:4rem;} }
+        @media (max-width:480px) { .brand-title{font-size:3rem;} .brand-tagline{font-size:0.9rem;} }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<div class="home-container">
+
+    <!-- Left Branding -->
+    <div class="home-left">
+        <div class="text-center">
+            <div class="logo-icon"><i class="fas fa-tools text-white text-6xl"></i></div>
+            <h1 class="brand-title">LocalCraft</h1>
+            <p class="brand-tagline">Find Trusted Local Workers Near You</p>
+        </div>
+    </div>
+
+    <!-- Right Dynamic Side -->
+    <div class="home-right">
+        <div class="w-full max-w-md">
+
+            <!-- Role Selection -->
+            <div id="role-selection">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Choose Account Type</h2>
+                <a th:href="@{/customer-login}">
+                    <div class="user-type-card">
+                        <i class="fas fa-user text-4xl text-purple-600 mb-4"></i>
+                        <h3 class="text-xl font-semibold">Customer</h3>
+                        <p class="text-gray-600">Looking for services</p>
+                    </div>
+                </a>
+                <!-- Updated link for Technician using Thymeleaf routing -->
+                <a th:href="@{/technician-login}">
+    <div class="user-type-card">
+        <i class="fas fa-tools text-4xl text-purple-600 mb-4"></i>
+        <h3 class="text-xl font-semibold">Technician</h3>
+        <p class="text-gray-600">Providing services</p>
+    </div>
+</a>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

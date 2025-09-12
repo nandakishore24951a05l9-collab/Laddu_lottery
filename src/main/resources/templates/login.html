@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalCraft - Customer Login</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Poppins', sans-serif; }
+body, html { margin: 0; padding: 0; height: 100%; }
+.container { display: flex; height: 100vh; }
+
+/* Left Panel - Branding */
+.left-panel {
+    width: 70%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    clip-path: ellipse(85% 100% at 0% 50%);
+}
+.logo-icon { display: inline-block; padding: 20px; border-radius: 50%; margin-bottom: 30px; animation: pulse 3s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.05);} }
+.brand-title { font-size: 6rem; font-weight: 600; background: linear-gradient(45deg,#fff,#f0f8ff,#e6e6fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align:center; margin-bottom:10px; letter-spacing:-2px; }
+.brand-tagline { font-size: 1.2rem; font-style: italic; opacity: 0.9; text-align:center; }
+
+/* Right Panel - Form */
+.right-panel {
+    width: 30%;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+.form-container { width: 100%; max-width: 350px; }
+
+input {
+    width: 100%; 
+    padding: 10px; 
+    margin: 8px 0; 
+    border-radius: 6px; 
+    border: 1px solid #ccc; 
+    font-size: 1rem; 
+    background: #f0f4f8; 
+}
+input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102,126,234,0.5); }
+button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: 500; }
+button:hover { background: #564fc6; }
+.error { color: red; font-size: 0.85rem; margin-top: 3px; }
+.message { color: red; font-size: 0.9rem; margin: 5px 0; font-weight: 500; }
+
+/* OTP Boxes */
+.otp-box { width: 40px; height: 50px; border: 1px solid #ccc; font-size: 1.5rem; text-align: center; margin: 5px; border-radius: 6px; background: #f0f4f8; }
+.otp-container { display: flex; justify-content: center; margin-bottom: 10px; }
+.hidden { display: none; }
+.resend-anchor { text-decoration: underline; color: #555; cursor: not-allowed; display: block; margin-bottom: 5px; }
+.resend-anchor.active { color: #667eea; cursor: pointer; }
+.timer-text { font-size: 0.85rem; color: #333; margin-bottom: 10px; }
+.shake { animation: shake 0.3s; }
+@keyframes shake { 0% {transform: translateX(0);} 25% {transform: translateX(-5px);} 50% {transform: translateX(5px);} 75% {transform: translateX(-5px);} 100% {transform: translateX(0);} }
+
+/* Password validation */
+.password-condition { font-size: 0.85rem; margin: 3px 0; display: flex; align-items: center; }
+.password-condition i { margin-right: 5px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Left Panel -->
+    <div class="left-panel">
+        <div class="text-center">
+            <div class="logo-icon"><i class="fas fa-tools text-white text-6xl"></i></div>
+            <h1 class="brand-title">LocalCraft</h1>
+            <p class="brand-tagline">Find Trusted Local Workers Near You</p>
+        </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+        <div class="form-container">
+            <!-- Step 1: Phone -->
+            <div id="step-phone">
+                <h2 class="text-xl font-bold mb-4">Enter Your Mobile Number</h2>
+                <input type="tel" id="phone" maxlength="10" placeholder="10-digit Mobile Number">
+                <div id="error-phone" class="error hidden">Please enter a valid 10-digit phone number.</div>
+                <div id="phone-exist" class="message hidden">The mobile number you entered is already registered. Please use a different number.</div>
+                <button onclick="sendOTP()">Enter</button>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div id="step-otp" class="hidden">
+                <h2 class="text-xl font-bold mb-4">Enter OTP</h2>
+                <div class="otp-container">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,0)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,1)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,2)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,3)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,4)">
+                    <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this,5)">
+                </div>
+                <a id="resend-anchor" class="resend-anchor">Resend OTP</a>
+                <p id="timer-text" class="timer-text">You can resend the OTP after the timer ends.</p>
+                <div id="error-otp" class="error hidden">Invalid OTP. Please try again.</div>
+                <button onclick="verifyOTP()">Enter</button>
+            </div>
+
+            <!-- Step 3: User Details -->
+            <div id="step-details" class="hidden">
+                <h2 class="text-xl font-bold mb-4">Create Your Account</h2>
+                <div id="email-exist" class="message hidden">The email address you entered is already registered. Please use a different email.</div>
+                <input type="text" id="firstName" placeholder="First Name">
+                <input type="text" id="lastName" placeholder="Last Name">
+                <input type="email" id="email" placeholder="Professional Email">
+                <div id="email-error" class="error hidden">Enter a valid email address.</div>
+                <input type="password" id="password" placeholder="Password">
+                <div id="password-conditions">
+                    <div class="password-condition" id="char-condition"><i class="fas fa-times text-red-500"></i> Minimum 8 characters</div>
+                    <div class="password-condition" id="upper-condition"><i class="fas fa-times text-red-500"></i> At least 1 uppercase letter</div>
+                    <div class="password-condition" id="digit-condition"><i class="fas fa-times text-red-500"></i> At least 1 digit</div>
+                    <div class="password-condition" id="special-condition"><i class="fas fa-times text-red-500"></i> At least 1 special character</div>
+                </div>
+                <button onclick="submitDetails()">Create Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let otpTimer, timeLeft = 120;
+const anchor = document.getElementById('resend-anchor');
+const timerText = document.getElementById('timer-text');
+let currentPhone = "";
+
+/* ========= Customer identity helpers (ADD/KEEP) ========= */
+function uuid4(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+ function setIdentityForPhone(phone){
+  if(!phone) return;
+  const key = 'PHONE:' + phone;
+  try { localStorage.setItem('lc.key', key); } catch(e){}
+  // also keep your existing stored phone for convenience
+  try { localStorage.setItem('lc.customer.phone', phone); } catch(e){}
+  try { sessionStorage.setItem('lc.customer.phone', phone); } catch(e){}
+  document.cookie = 'lc_phone=' + encodeURIComponent(phone) + '; path=/';
+  document.cookie = 'lc_key='   + encodeURIComponent(key)   + '; path=/; max-age=' + (60*60*24*365);
+}
+
+
+function ensureCustomerKey(){
+  // priority: localStorage, cookie; create if missing
+  try {
+    let key = localStorage.getItem('lc.key');
+    if (!key) {
+      const ck = (document.cookie.match(/(?:^|; )lc_key=([^;]+)/)||[])[1];
+      key = ck ? decodeURIComponent(ck) : uuid4();
+      localStorage.setItem('lc.key', key);
+    }
+    document.cookie = 'lc_key=' + encodeURIComponent(key) + '; path=/; max-age=' + (60*60*24*365);
+    return key;
+  } catch(e) {
+    const key = uuid4();
+    document.cookie = 'lc_key=' + encodeURIComponent(key) + '; path=/; max-age=' + (60*60*24*365);
+    return key;
+  }
+}
+
+/* Make sure the browser has a durable customer key as soon as this page opens */
+document.addEventListener('DOMContentLoaded', () => {
+  ensureCustomerKey();
+});
+
+// Step 1: Send OTP (backend call)
+function sendOTP(){
+  const phone = document.getElementById('phone').value.trim();
+  const errorDiv = document.getElementById('error-phone');
+  const phoneExistDiv = document.getElementById('phone-exist');
+  if(!/^\d{10}$/.test(phone)){
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+  errorDiv.classList.add('hidden');
+  phoneExistDiv.classList.add('hidden');
+  currentPhone = phone;
+
+  fetch(`/otp/send?phone=${phone}`, { method: "POST" })
+    .then(res => res.text())
+    .then(result => {
+      if(result === "exists"){
+        phoneExistDiv.classList.remove('hidden');
+      } else if(result === "success"){
+        document.getElementById('step-phone').classList.add('hidden');
+        document.getElementById('step-otp').classList.remove('hidden');
+        startOTPTimer();
+      } else {
+        errorDiv.innerText = "Error sending OTP.";
+        errorDiv.classList.remove('hidden');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Server error while sending OTP.");
+    });
+}
+
+// OTP Timer
+function startOTPTimer(){
+  timeLeft = 120;
+  anchor.classList.remove('active');
+  timerText.innerText = `You can resend the OTP after 02:00`;
+  otpTimer = setInterval(()=>{
+    timeLeft--;
+    let minutes = String(Math.floor(timeLeft/60)).padStart(2,'0');
+    let seconds = String(timeLeft%60).padStart(2,'0');
+    timerText.innerText = `You can resend the OTP after ${minutes}:${seconds}`;
+    if(timeLeft<=0){
+      clearInterval(otpTimer);
+      anchor.classList.add('active');
+      timerText.innerText = 'You can resend the OTP now.';
+      document.querySelectorAll('.otp-box').forEach(b=>b.value='');
+    }
+  },1000);
+}
+
+anchor.addEventListener('click', ()=>{
+  if(anchor.classList.contains('active')){
+    sendOTP();
+    document.querySelectorAll('.otp-box').forEach(b=>b.value='');
+  }
+});
+
+// OTP Input Move Next
+function moveNext(box,index){
+  const boxes = document.querySelectorAll('.otp-box');
+  if(box.value.length===1 && index<boxes.length-1){
+    boxes[index+1].focus();
+  }
+}
+
+// Step 2: Verify OTP (backend call)
+function verifyOTP(){
+  const boxes = document.querySelectorAll('.otp-box');
+  const otp = Array.from(boxes).map(b=>b.value).join('');
+  const errorDiv = document.getElementById('error-otp');
+
+  fetch(`/otp/verify?otpInput=${otp}&phone=${currentPhone}`, { method: "POST" })
+    .then(res => res.text())
+    .then(result => {
+      if(result === "success"){
+        // ✅ NEW: remember phone for UI convenience + ensure key exists
+        saveCustomerPhone(currentPhone);
+        ensureCustomerKey();
+
+        errorDiv.classList.add('hidden');
+        clearInterval(otpTimer);
+        document.getElementById('step-otp').classList.add('hidden');
+        document.getElementById('step-details').classList.remove('hidden');
+      } else {
+        errorDiv.classList.remove('hidden');
+        document.querySelector('.otp-container').classList.add('shake');
+        setTimeout(()=>document.querySelector('.otp-container').classList.remove('shake'),300);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Server error while verifying OTP.");
+    });
+}
+
+// Password Validation
+document.getElementById('password').addEventListener('input',function(){
+  const val = this.value;
+  document.getElementById('char-condition').querySelector('i').className = val.length>=8?'fas fa-check text-green-500':'fas fa-times text-red-500';
+  document.getElementById('upper-condition').querySelector('i').className = /[A-Z]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+  document.getElementById('digit-condition').querySelector('i').className = /\d/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+  document.getElementById('special-condition').querySelector('i').className = /[!@#$%^&*]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
+});
+
+// Step 3: Submit Details (backend call)
+function submitDetails(){
+  const firstName = document.getElementById('firstName').value.trim();
+  const lastName = document.getElementById('lastName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const emailError = document.getElementById('email-error');
+  const emailExistDiv = document.getElementById('email-exist');
+  const conditions = ['char-condition','upper-condition','digit-condition','special-condition'];
+  const allValid = conditions.every(id=>document.getElementById(id).querySelector('i').classList.contains('text-green-500'));
+
+  emailExistDiv.classList.add('hidden');
+
+  if(!firstName || !lastName || !email || !allValid || !/\S+@\S+\.\S+/.test(email)){
+    if(!/\S+@\S+\.\S+/.test(email)) emailError.classList.remove('hidden'); else emailError.classList.add('hidden');
+    return;
+  }
+  emailError.classList.add('hidden');
+
+  const user = { firstName, lastName, email, phone: currentPhone, password, role: "customer" };
+
+  fetch("/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user)
+  })
+  .then(async res => {
+    const msg = await res.text();
+    if(msg==="email-exists"){
+      emailExistDiv.classList.remove('hidden');
+    } else if(res.ok){
+      // ✅ NEW: keep phone + key after account creation, then go home
+      saveCustomerPhone(currentPhone);
+      ensureCustomerKey();
+      alert("Account created successfully!");
+      window.location.href = "/";
+    } else {
+      alert("Error: " + msg);
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Server error while creating account.");
+  });
+}
+
+// Keep (already present)
+function saveCustomerPhone(phone){
+  if(!phone) return;
+  try { localStorage.setItem('lc.customer.phone', phone); } catch(e){}
+  try { sessionStorage.setItem('lc.customer.phone', phone); } catch(e){}
+  // cookie fallback
+  document.cookie = 'lc_phone=' + encodeURIComponent(phone) + '; path=/';
+}
+</script>
+
+
+</body>
+</html>

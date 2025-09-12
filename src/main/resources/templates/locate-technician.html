@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Locate Technician • LocalCraft</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    #map{height:calc(100vh - 160px)}
+
+    /* Distance pill */
+    .distance-box{
+      position:absolute;bottom:12px;right:12px;z-index:5000;
+      background:rgba(255,255,255,.95);backdrop-filter:saturate(1.2);
+      border-radius:10px;padding:8px 12px;font-weight:700;
+      box-shadow:0 8px 30px rgba(0,0,0,.18);border:1px solid rgba(0,0,0,.06);
+    }
+
+    /* USER: green pulsing dot */
+    .pulse-pin{
+      width:26px;height:26px;border-radius:9999px;background:#10b981;border:3px solid #fff;
+      box-shadow:0 0 0 0 rgba(16,185,129,.45);
+      animation:pulse 1.8s ease-out infinite;
+    }
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(16,185,129,.45);transform:scale(1)}
+      70%{box-shadow:0 0 0 18px rgba(16,185,129,0);transform:scale(1.05)}
+      100%{box-shadow:0 0 0 0 rgba(16,185,129,0);transform:scale(1)}
+    }
+
+    /* TECH: blinking emoji, big */
+    .tech-emoji{
+      font-size:34px;line-height:34px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.30));
+      animation:blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink{
+      0%,100%{opacity:1;transform:scale(1)}
+      50%{opacity:.55;transform:scale(1.12)}
+    }
+
+    /* Remove default map attribution clutter (optional) */
+    .leaflet-control-attribution{display:none!important;}
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Top bar -->
+  <nav class="w-full gradient-bg shadow z-40">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex items-center justify-between h-14">
+        <div class="flex items-center gap-3 text-white">
+          <i class="fas fa-tools text-xl"></i>
+          <span class="font-bold text-xl">LocalCraft</span>
+        </div>
+        <div class="text-sm text-white/90">
+          Live technician location
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header with back -->
+  <header class="max-w-6xl mx-auto px-4 mt-5">
+    <div class="flex items-center justify-between">
+      <button id="btnBack" class="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-800">
+        ← Back
+      </button>
+      <div class="flex items-center gap-2 text-sm">
+        <span id="name" class="font-semibold">Technician</span>
+        <span id="status" class="px-2 py-0.5 rounded-full bg-green-100 text-green-800 font-bold text-xs">LIVE</span>
+      </div>
+    </div>
+    <p id="hint" class="text-gray-500 text-sm mt-2">
+      Auto-zoom shows only you and the technician. Distance updates every 5s.
+    </p>
+  </header>
+
+  <!-- Map -->
+  <main class="max-w-6xl mx-auto px-4 mt-4 mb-6">
+    <div class="relative rounded-xl shadow bg-white overflow-hidden">
+      <div id="map"></div>
+      <div id="distBox" class="distance-box">Distance: —</div>
+    </div>
+  </main>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin="">
+  </script>
+
+<script>
+  // --- Helpers ---
+  function q(key){ const u=new URL(window.location.href); return u.searchParams.get(key); }
+  function latLngFrom(obj){
+    if (obj && typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
+      return [obj.latitude, obj.longitude];
+    }
+    if (obj && typeof obj.location === 'string' && obj.location.includes(',')) {
+      const [la,lo]=obj.location.split(',').map(s=>parseFloat(s.trim()));
+      if(!isNaN(la)&&!isNaN(lo)) return [la,lo];
+    }
+    return null;
+  }
+  function haversineKm(a,b){
+    const [lat1,lon1]=a,[lat2,lon2]=b;
+    const R=6371;
+    const dLat=(lat2-lat1)*Math.PI/180;
+    const dLon=(lon2-lon1)*Math.PI/180;
+    const la1=lat1*Math.PI/180, la2=lat2*Math.PI/180;
+    const c=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(c),Math.sqrt(1-c));
+  }
+
+  // Back link to worker details
+  const techId = q('id');
+  document.getElementById('btnBack').onclick = () => {
+    window.location.href = '/worker-details?id=' + encodeURIComponent(techId || '');
+  };
+
+  // Map init
+  const map = L.map('map', { zoomControl:true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
+
+  // Only TWO markers, nothing else
+  let techMarker=null, custMarker=null, pollTimer=null, firstFit=true;
+
+  // Custom DIV icons
+  const userDivIcon = L.divIcon({
+    className: '', iconSize: [26,26], iconAnchor: [13,13],
+    html: '<div class="pulse-pin" title="You"></div>'
+  });
+  const techDivIcon = L.divIcon({
+    className: '', iconSize: [34,34], iconAnchor: [17,17],
+    html: '<div class="tech-emoji" title="Technician">🛠️</div>'
+  });
+
+  // Fetch technician record
+  async function fetchTech(){
+    try{
+      const r=await fetch('/technicians/' + techId);
+      if(!r.ok) throw 0;
+      return await r.json();
+    }catch(_){ return null; }
+  }
+
+  // Update the two pins + distance + fit
+  async function tick(customerLL){
+    const data = await fetchTech();
+    if(!data){ return; }
+
+    // name
+    document.getElementById('name').textContent =
+      (`${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Technician');
+
+    // tech
+    const techLL = latLngFrom(data);
+    if(techLL){
+      if(!techMarker){
+        techMarker=L.marker(techLL,{icon:techDivIcon, title:'Technician'}).addTo(map);
+      }else{
+        techMarker.setLatLng(techLL);
+      }
+    }
+
+    // user
+    if(customerLL){
+      if(!custMarker){
+        custMarker=L.marker(customerLL,{icon:userDivIcon,title:'You'}).addTo(map);
+      }else{
+        custMarker.setLatLng(customerLL);
+      }
+    }
+
+    // show only these two; fit once, then keep both visible
+    if(customerLL && techLL){
+      const bounds=L.latLngBounds([customerLL, techLL]);
+      const dist = haversineKm(customerLL, techLL);
+      document.getElementById('distBox').textContent = `Distance: ${dist.toFixed(2)} km`;
+      if(firstFit){
+        map.fitBounds(bounds,{padding:[48,48],maxZoom:16});
+        firstFit=false;
+      }else{
+        // keep them in view; if one goes off, refit softly
+        if(!map.getBounds().pad(-0.2).contains(customerLL) || !map.getBounds().pad(-0.2).contains(techLL)){
+          map.fitBounds(bounds,{padding:[48,48],maxZoom:16});
+        }
+      }
+    }else if(techLL && firstFit){
+      map.setView(techLL, 15);
+      firstFit=false;
+    }
+  }
+
+  function startPolling(customerLL){
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(()=>tick(customerLL), 5000);
+  }
+
+  (function init(){
+    // Get user location
+    if (navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        const c=[pos.coords.latitude,pos.coords.longitude];
+        await tick(c); startPolling(c);
+      }, async _=>{
+        await tick(null); startPolling(null);
+      }, {enableHighAccuracy:true,timeout:8000,maximumAge:0});
+    } else {
+      tick(null); startPolling(null);
+    }
+    setTimeout(()=>map.invalidateSize(true), 120);
+  })();
+</script>
+</body>
+</html>

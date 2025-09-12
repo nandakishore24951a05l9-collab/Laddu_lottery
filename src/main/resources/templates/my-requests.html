@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Requests • LocalCraft</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    .card{background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .badge{padding:.15rem .5rem;border-radius:9999px;font-size:.75rem;font-weight:700}
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+
+  <!-- Top Nav -->
+  <nav class="fixed top-0 w-full gradient-bg shadow-lg z-50">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-tools text-white text-2xl"></i>
+          <span class="text-2xl font-bold text-white">LocalCraft</span>
+        </div>
+        <div class="hidden md:flex items-center space-x-6">
+          <a href="/customer-details#home" class="text-white hover:text-gray-200">Home</a>
+          <a href="/customer-details#services" class="text-white hover:text-gray-200">Services</a>
+          <a href="/customer-details#help" class="text-white hover:text-gray-200">Help</a>
+          <a href="/my-requests" class="text-white font-semibold underline">My Requests</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page -->
+  <main class="max-w-4xl mx-auto px-4 pt-24 pb-10">
+    <div class="flex items-center justify-between mb-3">
+      <h1 class="text-2xl font-bold">My Requests</h1>
+      <button class="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+              onclick="window.location.href='/customer-details#home'">
+        ← Back to Home
+      </button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">
+      These requests are stored in your backend account database and update as technicians respond.
+    </p>
+
+    <div id="info" class="text-sm text-gray-600 mb-3"></div>
+    <div id="list" class="space-y-3"></div>
+  </main>
+
+  <script src="https://kit.fontawesome.com/fe1ff344aa.js" crossorigin="anonymous"></script>
+
+<script>
+  // ===== Utilities =====
+  function badge(s){
+    const map = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      ACCEPTED:'bg-green-100 text-green-800',
+      REJECTED:'bg-red-100 text-red-800',
+      COMPLETED:'bg-gray-200 text-gray-800'
+    };
+    const cls = map[s] || 'bg-gray-100 text-gray-800';
+    return `<span class="badge ${cls}">${s}</span>`;
+  }
+
+  function ensureCustomerKey(){
+    function uuid4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+    let key = localStorage.getItem('lc.key');
+    if(!key){ key = uuid4(); localStorage.setItem('lc.key', key); }
+    return key;
+  }
+
+  function templateRequestCard(j){
+    const d = new Date(j.createdAt || Date.now());
+    const service = j.serviceType || 'Service';
+    const desc    = j.description || '—';
+    const coords  = (j.customerLat != null && j.customerLng != null)
+      ? `${Number(j.customerLat).toFixed(5)}, ${Number(j.customerLng).toFixed(5)}`
+      : '—';
+    const tech    = j.technician;
+    const techName = tech ? `${tech.firstName||''} ${tech.lastName||''}`.trim() : '—';
+    const techPhone = tech ? (tech.phone || '—') : '—';
+
+    // ✅ Show map only if ACCEPTED
+    let actionSection = ``;
+    if (j.status === 'ACCEPTED') {
+      actionSection = `<div class="mt-3">
+          <a class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              href="/track-job?jobId=${j.id}">
+   Open Map
+ </a>
+      </div>`;
+    } else if (j.status === 'PENDING') {
+      actionSection = `<div class="mt-3 text-xs text-gray-500">Waiting for technician to accept.</div>`;
+    } else if (j.status === 'REJECTED') {
+      actionSection = `<div class="mt-3 text-xs text-red-500">This request was rejected.</div>`;
+    } else if (j.status === 'COMPLETED') {
+      actionSection = `<div class="mt-3 text-xs text-green-600">This job is completed.</div>`;
+    }
+
+    return `
+      <div class="card p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="font-semibold">#${j.id} • ${service}</div>
+            <div class="text-xs text-gray-500">Created: ${d.toLocaleString()}</div>
+          </div>
+          ${badge(j.status)}
+        </div>
+        <div class="mt-2 text-sm text-gray-700">
+          <div><span class="font-medium">Problem:</span> ${desc}</div>
+          <div><span class="font-medium">Your Location:</span> ${coords}</div>
+          <div><span class="font-medium">Technician:</span> ${techName} (📞 ${techPhone})</div>
+        </div>
+        ${actionSection}
+      </div>
+    `;
+  }
+
+  async function loadMyRequests(){
+    const info = document.getElementById('info');
+    const listBox = document.getElementById('list');
+    listBox.innerHTML = '';
+
+    const customerKey = ensureCustomerKey();
+    info.textContent = 'Loading your requests...';
+
+    try {
+      const res = await fetch('/api/bookings/my', {
+        headers: { 'X-Customer-Key': customerKey }
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const items = await res.json();
+
+      if(!Array.isArray(items) || items.length === 0){
+        listBox.innerHTML = '<p class="text-gray-600">No requests yet.</p>';
+        info.textContent = '';
+        return;
+      }
+
+      listBox.innerHTML = items.map(templateRequestCard).join('');
+      info.textContent = `Showing ${items.length} request(s).`;
+    } catch(e){
+      console.error(e);
+      listBox.innerHTML = '<p class="text-red-600">Could not load requests.</p>';
+      info.textContent = 'Error loading requests.';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadMyRequests();
+    setInterval(loadMyRequests, 10000); // refresh every 10s
+  });
+</script>
+</body>
+</html>

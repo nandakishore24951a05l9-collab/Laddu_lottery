@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalCraft - Carpenter Services Near You</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    html{scroll-behavior:smooth}
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    .avatar{width:50px;height:50px;border-radius:9999px;object-fit:cover;margin-right:10px;background:#e5e7eb}
+    .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);display:none;align-items:center;justify-content:center;z-index:60}
+    .spinner{width:56px;height:56px;border:4px solid #ddd;border-top-color:#7c3aed;border-radius:9999px;animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{margin-top:12px;font-weight:600;color:#4b5563}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80}
+    .modal.open{display:flex}
+    .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    .modal-panel{position:relative;background:#fff;border-radius:16px;width:100%;max-width:560px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.15)}
+
+    /* Cards */
+    .card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;border:2px solid transparent}
+    .card:hover{transform:translateY(-2px);box-shadow:0 20px 45px rgba(124,58,237,.18);border-color:rgba(124,58,237,.35)}
+
+    /* Map modal */
+    .map-modal{position:fixed;inset:0;display:none;z-index:70}
+    .map-modal.open{display:block}
+    .map-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+    .map-panel{position:relative;width:96vw;height:88vh;margin:4vh auto 0;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.22)}
+    #emergency-map{width:100%;height:100%}
+    .map-close{position:absolute;right:12px;top:10px;background:rgba(255,255,255,.95);border-radius:9999px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.2);z-index:1000}
+    .map-close:hover{background:#fff}
+
+    /* Customer pulse */
+    .pulse-dot{width:16px;height:16px;background:#10b981;border-radius:9999px;border:2px solid #fff;box-shadow:0 0 0 rgba(16,185,129,.6);animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}70%{box-shadow:0 0 0 18px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+
+    /* Technician marker - Bigger + Blinking */
+    .tech-dot {
+      font-size: 40px;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+    .tech-dot.enlarged {
+      font-size: 55px !important;
+      animation: blink 0.8s infinite;
+    }
+
+    .visually-hidden{display:none!important}
+    .nav-link{display:flex;align-items:center;height:64px;padding:0 12px;font-weight:500;color:#fff;opacity:.95}
+    .nav-link:hover{opacity:1}
+
+    /* Updated buttons */
+    .btn-violet{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;transition:transform .12s ease, box-shadow .12s ease}
+    .btn-violet:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(79,70,229,.35)}
+    .btn-emerald{background:#059669;color:#fff;transition:transform .12s ease, box-shadow .12s ease}
+    .btn-emerald:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(5,150,105,.35)}
+
+    .pill{display:inline-flex;align-items:center;gap:.45rem;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;padding:.35rem .6rem;border-radius:9999px;font-size:.8rem}
+    .pill .dot{width:6px;height:6px;border-radius:9999px;background:#6366f1;animation:blip 1s infinite}
+    .pill .dot:nth-child(2){animation-delay:.15s}
+    .pill .dot:nth-child(3){animation-delay:.3s}
+    @keyframes blip{0%,100%{opacity:.3}50%{opacity:1}}
+  </style>
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="flex flex-col items-center">
+      <div class="spinner"></div>
+      <div class="loading-text">Finding nearby technicians…</div>
+    </div>
+  </div>
+
+  <!-- Request Modal -->
+  <div id="req-modal" class="modal">
+    <div class="modal-backdrop" onclick="closeReqModal()"></div>
+    <div class="modal-panel">
+      <button class="absolute right-3 top-3 text-gray-500 hover:text-gray-700" onclick="closeReqModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+
+      <h3 class="text-xl font-semibold mb-4">Request Carpenter</h3>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-sm text-gray-600">Service Type</label>
+          <input id="req-service" type="text" value="Carpenter"
+                 readonly aria-readonly="true"
+                 class="w-full border rounded-lg p-2 bg-gray-100 text-gray-700 cursor-not-allowed select-none"/>
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-600">Description</label>
+          <textarea id="req-desc" rows="3" class="w-full border rounded-lg p-2"
+                    placeholder="e.g., Need to fix a broken door and install a shelf"></textarea>
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-600">Location</label>
+          <div class="flex gap-2 mb-2">
+            <button id="btn-use-location" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+              <i class="fa-solid fa-location-crosshairs mr-1"></i> Use Current Location
+            </button>
+            <button id="btn-geocode" class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+              <i class="fa-solid fa-magnifying-glass-location mr-1"></i> Find by Address
+            </button>
+          </div>
+          <input id="req-address" type="text" class="w-full border rounded-lg p-2 mb-2"
+                 placeholder="Type address to search (optional if using current location)">
+          <input id="req-lat" type="hidden">
+          <input id="req-lng" type="hidden">
+          <div id="req-status" class="mt-1" style="display:none">
+            <span class="pill">
+              <span>Fetching location…</span>
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button class="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200" onclick="closeReqModal()">Cancel</button>
+          <button id="btn-submit-request" class="px-4 py-2 rounded btn-emerald">Submit Request</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Map Modal -->
+  <div id="map-modal" class="map-modal">
+    <div class="map-backdrop" onclick="closeMapModal()"></div>
+    <div class="map-panel">
+      <button class="map-close" onclick="closeMapModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark text-xl text-gray-700"></i>
+      </button>
+      <div id="emergency-map"></div>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="fixed top-0 w-full gradient-bg shadow-lg z-50">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <i class="fas fa-tools text-white text-2xl mr-2"></i>
+          <span class="text-2xl font-bold text-white">LocalCraft</span>
+        </div>
+        <div class="hidden md:flex">
+          <a href="/customer-details#home" class="nav-link">Home</a>
+          <a href="/customer-details#about" class="nav-link">About</a>
+          <a href="/customer-details#services" class="nav-link">Services</a>
+          <a href="/customer-details#reviews" class="nav-link">Reviews</a>
+          <a href="/customer-details#help" class="nav-link">Help</a>
+          <a href="/customer-details#profile" class="nav-link" title="Profile"><i class="fas fa-user mr-1"></i></a>
+          <a href="/my-requests" class="nav-link"><i class="fas fa-list-check mr-1"></i>My Requests</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Carpenter Section -->
+  <section id="service-workers" class="section-padding bg-white mt-20">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center mb-8">
+        <button onclick="window.history.back()" class="mr-4" title="Back">
+          <i class="fas fa-arrow-left text-xl text-purple-600"></i>
+        </button>
+        <h3 id="service-title" class="text-3xl font-bold text-gray-800">Carpenter Service Near You</h3>
+      </div>
+
+      <div class="mb-6 flex flex-col md:flex-row gap-4">
+        <input type="text" id="worker-search" placeholder="Search by name, experience, specialization, phone, address or km…" class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+        <button id="btn-emergency-map" class="p-3 px-4 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+          🚨 Emergency Map Search
+        </button>
+      </div>
+
+      <div id="workers-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <p id="no-workers" class="text-gray-500 mt-4 hidden">No carpenters found nearby.</p>
+    </div>
+  </section>
+
+  <script src="https://kit.fontawesome.com/fe1ff344aa.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const addrCache = {};
+    const PLACEHOLDER = 'https://via.placeholder.com/50?text=%20';
+
+    let CURRENT_LAT = null, CURRENT_LNG = null;
+    let LAST_ENRICHED = [];
+    let SELECTED_TECH_ID = null;
+
+    const $modal = () => document.getElementById('req-modal');
+    const $svc = () => document.getElementById('req-service');
+    const $desc = () => document.getElementById('req-desc');
+    const $addr = () => document.getElementById('req-address');
+    const $lat  = () => document.getElementById('req-lat');
+    const $lng  = () => document.getElementById('req-lng');
+    const $status = () => document.getElementById('req-status');
+
+    function setLoading(v){ document.getElementById('loading-overlay').style.display = v ? 'flex' : 'none'; }
+
+    function preloadImage(url){
+      return new Promise(res=>{
+        if(!url) return res(false);
+        const img=new Image(); img.onload=()=>res(true); img.onerror=()=>res(false); img.src=url;
+      });
+    }
+
+    async function resolvePhoto(detail, worker){
+      if(worker && worker.photoUrl){
+        const v = `${worker.photoUrl}?v=${Date.now()}`;
+        return (await preloadImage(v)) ? v : PLACEHOLDER;
+      }
+      const raw = (detail && (detail.profilePhotoUrl || detail.profilePhoto)) || worker.profilePhoto;
+      if(raw){
+        if(raw.startsWith('data:image/') || /^https?:\/\//i.test(raw) || raw.startsWith('/')){
+          const v = `${raw}${raw.includes('?') ? '&':'?'}v=${Date.now()}`;
+          return (await preloadImage(v)) ? v : PLACEHOLDER;
+        }
+        const guess = `/uploads/${encodeURIComponent(raw)}?v=${Date.now()}`;
+        return (await preloadImage(guess)) ? guess : PLACEHOLDER;
+      }
+      return PLACEHOLDER;
+    }
+
+    async function toReadableAddress(locStr){
+      if(!locStr || !locStr.includes(',')) return '—';
+      const [lat,lng]=locStr.split(',').map(v=>parseFloat(v.trim()));
+      if(isNaN(lat)||isNaN(lng)) return '—';
+      const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+      if(addrCache[key]) return addrCache[key];
+      try{
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+        const j = await r.json();
+        const a = j.address || {};
+        const parts = [a.road,a.neighbourhood,a.suburb,a.village,a.hamlet,a.town,a.city,a.state,a.postcode].filter(Boolean);
+        const txt = parts.join(', ') || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        addrCache[key]=txt; return txt;
+      }catch{ return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+    }
+
+    function viewDetails(id){ window.location.href = `/worker-details?id=${id}`; }
+
+    function setStatus(msg){ $status().style.display = msg ? 'block' : 'none'; if(msg){ $status().querySelector('span').firstChild.textContent = msg + ' '; } }
+
+    function openReqModal(serviceType, techId){
+      $svc().value = serviceType || 'Carpenter';
+      $desc().value = '';
+      $addr().value = '';
+      $lat().value = CURRENT_LAT != null ? CURRENT_LAT : '';
+      $lng().value = CURRENT_LNG != null ? CURRENT_LNG : '';
+      setStatus('');
+      SELECTED_TECH_ID = techId;
+      $modal().classList.add('open');
+    }
+    function closeReqModal(){ $modal().classList.remove('open'); }
+
+    /* Map modal (Emergency) */
+    let _leafletMap=null, _leafletLayerGroup=null;
+    function openMapModal(){
+      const modal=document.getElementById('map-modal'); modal.classList.add('open');
+      setTimeout(()=>{
+        if(!_leafletMap){
+          _leafletMap=L.map('emergency-map',{zoomControl:true});
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(_leafletMap);
+        }
+        if(_leafletLayerGroup){ _leafletLayerGroup.clearLayers(); }
+        else{ _leafletLayerGroup=L.layerGroup().addTo(_leafletMap); }
+
+        if(typeof CURRENT_LAT==='number' && typeof CURRENT_LNG==='number'){
+          const userIcon=L.divIcon({className:'',html:'<div class="pulse-dot"></div>',iconSize:[16,16]});
+          const userMarker=L.marker([CURRENT_LAT,CURRENT_LNG],{icon:userIcon}).addTo(_leafletLayerGroup);
+          userMarker.bindPopup(`<b>You are here</b><br>
+            <button onclick="viewDetails(-1)" style="margin-top:4px;padding:4px 8px;background:#4f46e5;color:#fff;border-radius:6px;border:none;cursor:pointer">🔍 View Details</button>
+            <button onclick="handleMapRequest(-1)" style="margin-top:4px;margin-left:6px;padding:4px 8px;background:#059669;color:#fff;border-radius:6px;border:none;cursor:pointer">🤝 Request</button>`);
+          _leafletMap.setView([CURRENT_LAT,CURRENT_LNG],13);
+        }
+
+        const bounds=[];
+        LAST_ENRICHED.forEach(e=>{
+          const loc=e?.worker?.location||''; const p=loc.split(',');
+          if(p.length===2){
+            const lat=parseFloat(p[0]), lng=parseFloat(p[1]);
+            if(!isNaN(lat)&&!isNaN(lng)){
+              const label = `${e.worker.firstName||''} ${e.worker.lastName||''}`.trim() || 'Carpenter';
+              const techIcon=L.divIcon({
+                className:'',
+                html:`<div class="tech-dot" onclick="this.classList.toggle('enlarged')">🪚</div>`,
+                iconSize:[40,40],
+                popupAnchor:[0,-20]
+              });
+              const m=L.marker([lat,lng],{icon:techIcon}).addTo(_leafletLayerGroup);
+              const km = typeof e.worker.distanceKm === 'number' ? `${e.worker.distanceKm.toFixed(2)} km` : '—';
+              m.bindPopup(`<b>${label}</b><br><small>📍 ${km}</small><br>
+                <button onclick="viewDetails(${e.worker.id})" style="margin-top:4px;padding:4px 8px;background:#4f46e5;color:#fff;border-radius:6px;border:none;cursor:pointer">🔍 View Details</button>
+                <button onclick="handleMapRequest(${e.worker.id})" style="margin-top:4px;margin-left:6px;padding:4px 8px;background:#059669;color:#fff;border-radius:6px;border:none;cursor:pointer">🤝 Request</button>`);
+              bounds.push([lat,lng]);
+            }
+          }
+        });
+        if(bounds.length>0){ try{ _leafletMap.fitBounds(bounds,{padding:[30,30]}); }catch{} }
+      },0);
+    }
+    function closeMapModal(){ document.getElementById('map-modal').classList.remove('open'); }
+
+    /* New: close map then open modal */
+    function handleMapRequest(workerId){
+      closeMapModal();
+      openReqModal('Carpenter', workerId);
+    }
+
+    /* Fetch list */
+    async function fetchNearbyCarpenters(){
+      const grid=document.getElementById('workers-grid');
+      const noTxt=document.getElementById('no-workers');
+      setLoading(true);
+
+      const run = async (uLat,uLng)=>{
+        CURRENT_LAT=uLat; CURRENT_LNG=uLng;
+        try{
+          const r = await fetch(`/technicians/nearby?profession=carpenter&userLat=${uLat}&userLng=${uLng}&radiusKm=10`);
+          const arr = await r.json();
+          grid.innerHTML='';
+
+          if(!Array.isArray(arr) || !arr.length){ noTxt.classList.remove('hidden'); setLoading(false); LAST_ENRICHED=[]; return; }
+          noTxt.classList.add('hidden');
+
+          const enriched = await Promise.all(arr.map(async worker=>{
+            let detail={}; try{ const rr=await fetch(`/technicians/${worker.id}`); if(rr.ok) detail=await rr.json(); }catch{}
+            const photo=await resolvePhoto(detail,worker);
+            const specialization=detail.specialization||worker.specialization||'General Carpentry';
+            const experience=detail.experience??worker.experience??0;
+            const address=await toReadableAddress(detail.location||worker.location||'');
+            return {worker,photo,specialization,experience,address};
+          }));
+          LAST_ENRICHED=enriched;
+
+          enriched.forEach(({worker,photo,specialization,experience,address})=>{
+            const rating = worker.rating || 4;
+            const km = typeof worker.distanceKm === 'number' ? worker.distanceKm.toFixed(2) : '—';
+            const card=document.createElement('div');
+            card.className='card p-4 bg-white rounded-lg shadow-lg';
+            card.setAttribute('data-name',`${(worker.firstName||'')} ${(worker.lastName||'')}`.trim().toLowerCase());
+            card.setAttribute('data-specialization',String(specialization).toLowerCase());
+            card.setAttribute('data-experience',String(experience));
+            card.setAttribute('data-phone',String(worker.phone||'').toLowerCase());
+            card.setAttribute('data-address',String(address).toLowerCase());
+            card.setAttribute('data-km',String(km));
+
+            card.innerHTML = `
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                  <img src="${photo}" alt="Avatar" class="avatar" loading="lazy"
+                       onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+                  <div>
+                    <h3 class="text-lg font-bold">${worker.firstName||''} ${worker.lastName||''}</h3>
+                    <span class="text-yellow-500">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</span>
+                  </div>
+                </div>
+                <span class="text-gray-500 text-sm">${km} km away</span>
+              </div>
+              <p class="text-gray-600 mb-1"><strong>Experience:</strong> ${experience} years</p>
+              <p class="text-gray-600 mb-1"><strong>Specialization:</strong> ${specialization}</p>
+              <p class="text-gray-600 mb-1"><strong>Phone:</strong> ${worker.phone || '-'}</p>
+              <p class="text-gray-600 mb-1"><strong>Address:</strong> ${address}</p>
+              <div class="flex gap-2 mt-2">
+                <button class="px-4 py-2 rounded btn-violet" onclick="viewDetails(${worker.id})">🔍 View Details</button>
+                <button class="px-4 py-2 rounded btn-emerald" onclick="openReqModal('Carpenter', ${worker.id})">🤝 Request</button>
+              </div>
+            `;
+            grid.appendChild(card);
+          });
+
+          setLoading(false);
+        }catch{
+          grid.innerHTML='<p class="text-red-500">Unable to load carpenters. Please try again later.</p>';
+          setLoading(false); LAST_ENRICHED=[];
+        }
+      };
+
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(p=>run(p.coords.latitude,p.coords.longitude),
+                                                ()=>run(17.5843,78.4186));
+      }else{ run(17.5843,78.4186); }
+    }
+
+    /* Handlers */
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const btnUse=document.getElementById('btn-use-location');
+      const btnGeo=document.getElementById('btn-geocode');
+      const btnSubmit=document.getElementById('btn-submit-request');
+      const btnEmergency=document.getElementById('btn-emergency-map');
+      const searchInput=document.getElementById('worker-search');
+
+      if(btnUse) btnUse.addEventListener('click', async ()=>{
+        try{
+          setStatus('Fetching location…');
+          const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
+          const lat=pos.coords.latitude, lng=pos.coords.longitude;
+          $lat().value=lat; $lng().value=lng;
+
+          try{
+            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+            const j = await r.json();
+            $addr().value = (j && j.display_name) ? j.display_name : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            setStatus('Using current location'); setTimeout(()=>setStatus(''), 2000);
+          }catch{
+            $addr().value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            setStatus('Using current location'); setTimeout(()=>setStatus(''), 2000);
+          }
+        }catch{
+          setStatus('');
+          alert('Could not get your current location. Please type an address instead.');
+        }
+      });
+
+      if(btnGeo) btnGeo.addEventListener('click', async ()=>{
+        const q=$addr().value.trim();
+        if(!q){ alert('Type an address first.'); return; }
+        try{
+          setStatus('Resolving address…');
+          const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}`;
+          const resp=await fetch(url); const data=await resp.json();
+          if(!Array.isArray(data)||!data.length){ setStatus(''); alert('Address not found.'); return; }
+          const best=data[0];
+          $lat().value=+best.lat; $lng().value=+best.lon;
+          setStatus('Address found'); setTimeout(()=>setStatus(''),2000);
+        }catch{ setStatus(''); alert('Search failed. Please try again.'); }
+      });
+
+      if(btnSubmit) btnSubmit.addEventListener('click', submitBooking);
+      if(btnEmergency) btnEmergency.addEventListener('click', openMapModal);
+
+      if(searchInput){
+        searchInput.addEventListener('input', ()=>{
+          const q=searchInput.value.trim().toLowerCase();
+          const cards=document.querySelectorAll('#workers-grid .card');
+          let show=0;
+          cards.forEach(card=>{
+            const fields=['data-name','data-specialization','data-experience','data-phone','data-address','data-km']
+              .map(a=>card.getAttribute(a)||'').join(' ');
+            const matched = !q || fields.includes(q);
+            card.style.display = matched ? '' : 'none';
+            if(matched) show++;
+          });
+          document.getElementById('no-workers').classList.toggle('hidden', show!==0);
+        });
+      }
+    });
+
+    async function submitBooking(){
+      const serviceType = $svc().value.trim() || 'Carpenter';
+      const lat = parseFloat($lat().value);
+      const lng = parseFloat($lng().value);
+
+      if(!SELECTED_TECH_ID){ alert('Please click "Request" on a technician card first.'); return; }
+      if(Number.isNaN(lat) || Number.isNaN(lng)){ alert('Please set your location.'); return; }
+
+      try{
+        const dto = {
+          technicianId: SELECTED_TECH_ID,
+          serviceType,
+          mode: "I_COME_TO_YOU",
+          customerLocation: `${lat},${lng}`,
+          customerLat: lat,
+          customerLng: lng,
+          note: $desc().value
+        };
+
+        const res = await fetch('/api/bookings', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'same-origin',
+          body: JSON.stringify(dto)
+        });
+
+        if(res.status===401 || res.status===403){
+          alert('Please login as a customer to request a service.');
+          window.location.href='/login-user';
+          return;
+        }
+
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){
+          alert('Create booking failed: ' + (data.message || res.statusText));
+          return;
+        }
+
+        closeReqModal();
+        alert('Request sent! Technician will see your booking.');
+      }catch(e){
+        console.error(e);
+        alert('Network error creating booking.');
+      }
+    }
+
+    /* Boot */
+    window.onload = fetchNearbyCarpenters;
+  </script>
+</body>
+</html>

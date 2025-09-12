@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LocalCraft • Technician Dashboard</title>
+
+  <!-- Styling + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <!-- Leaflet (Map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    .gradient-bg{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+    .card{background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .pill{padding:.15rem .6rem;border-radius:9999px;font-size:.75rem;font-weight:600}
+    .pill-pending{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .pill-accepted{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:.6rem;font-weight:600}
+    .btn-accept{background:#059669;color:#fff}
+    .btn-decline{background:#ef4444;color:#fff}
+    #map{height:420px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    .toolbar-link{color:#fff;opacity:.9}
+    .toolbar-link:hover{opacity:1}
+    .hero{border-radius:18px}
+    /* Modal: ensure it is above Leaflet panes and lock background scroll */
+    .modal-overlay{background:rgba(0,0,0,.45); z-index:10000}
+    .modal-panel{z-index:10001}
+    .body-lock{overflow:hidden}
+    .img-tile{height:72px;width:100%;border:2px dashed #e5e7eb;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .img-tile img{height:100%;width:100%;object-fit:cover}
+  </style>
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Top bar -->
+  <nav class="fixed top-0 w-full gradient-bg shadow z-40">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center justify-between h-14">
+        <div class="flex items-center gap-2 text-white">
+          <i class="fas fa-tools text-xl"></i>
+          <span class="font-bold text-xl">LocalCraft</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-white">
+          <!-- removed Availability on purpose -->
+          <a class="toolbar-link" href="#jobs"><i class="fa-solid fa-briefcase mr-1"></i>Job Requests</a>
+          <a class="toolbar-link" href="#help"><i class="fa-regular fa-circle-question mr-1"></i>Help</a>
+          <!-- small emoji profile button at right -->
+          <button id="btn-profile" class="toolbar-link inline-flex items-center gap-2" title="Profile">
+            <span style="font-size:18px">🧑‍🔧</span> <span id="top-name" class="hidden sm:inline">loading…</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 pt-20 pb-16">
+
+    <!-- Hero header -->
+    <section class="gradient-bg hero text-white p-8 mt-6 mb-8 shadow">
+      <h1 class="text-3xl md:text-4xl font-extrabold">Hi <span id="greet-name">Technician</span>!</h1>
+      <p class="mt-2 max-w-2xl opacity-90">
+        “Crafting quality solutions, one project at a time. Your trusted local professional ready to bring your vision to life.”
+      </p>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left: Job requests -->
+      <section id="jobs" class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold text-gray-900">Job Requests</h2>
+          <div class="flex gap-2">
+            <!-- hard refresh = true page refresh -->
+            <button id="btn-refresh" class="btn bg-purple-600 text-white hover:bg-purple-700" title="Reload">
+              <i class="fas fa-rotate"></i> Refresh
+            </button>
+          </div>
+        </div>
+        <div id="jobs-list" class="space-y-4"></div>
+        <div id="jobs-empty" class="text-gray-500 text-sm hidden">No requests right now.</div>
+        <div id="jobs-error" class="text-red-600 text-sm hidden">Couldn’t load requests.</div>
+      </section>
+
+      <!-- Right: Map & Active trip -->
+      <section class="card p-5">
+        <h2 class="text-xl font-semibold text-gray-900 mb-3">Live Tracking</h2>
+
+        <!-- Placeholder until a job is accepted -->
+        <div id="live-placeholder" class="border rounded-lg p-4 mb-3 bg-gray-50">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-location-dot mt-1"></i>
+            <p class="text-sm text-gray-700">
+              Accept a customer request to start live tracking. Once accepted, you’ll see your location and the
+              customer’s location update in real time.
+            </p>
+          </div>
+        </div>
+
+        <div id="map" class="mb-3"></div>
+        <div id="trip-info" class="text-sm text-gray-700">
+          <div><span class="font-semibold">Customer:</span> <span id="trip-customer">—</span></div>
+          <div><span class="font-semibold">Customer Location:</span> <span id="trip-dest">—</span></div>
+          <div><span class="font-semibold">Distance (straight line):</span> <span id="trip-dist">—</span></div>
+          <div class="mt-2 text-xs text-gray-500">Location updates stream live after you accept a job.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Need Help -->
+    <section id="help" class="card p-6 mt-8">
+      <h3 class="text-2xl font-semibold text-center mb-6">Need Help?</h3>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a class="card p-4 text-center hover:shadow-lg transition" href="#">
+          <div class="text-2xl"><i class="fa-regular fa-circle-question"></i></div>
+          <div class="font-semibold mt-2">FAQ</div>
+          <div class="text-sm text-gray-600">Find answers to common questions</div>
+        </a>
+        <a class="card p-4 text-center hover:shadow-lg transition" href="#">
+          <div class="text-2xl"><i class="fa-regular fa-comments"></i></div>
+          <div class="font-semibold mt-2">Live Chat</div>
+          <div class="text-sm text-gray-600">Chat with our support team</div>
+        </a>
+        <a class="card p-4 text-center hover:shadow-lg transition" href="tel:1800LOCALCRAFT">
+          <div class="text-2xl"><i class="fa-solid fa-phone"></i></div>
+          <div class="font-semibold mt-2">Call</div>
+          <div class="text-sm text-gray-600">1-800-LOCAL-CRAFT</div>
+        </a>
+        <a class="card p-4 text-center hover:shadow-lg transition" href="mailto:support@localcraft.com">
+          <div class="text-2xl"><i class="fa-regular fa-envelope"></i></div>
+          <div class="font-semibold mt-2">Email</div>
+          <div class="text-sm text-gray-600">support@localcraft.com</div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-8 text-sm text-gray-600">
+      <div class="grid md:grid-cols-4 gap-6">
+        <div>
+          <div class="flex items-center gap-2 text-gray-900 font-semibold">
+            <i class="fas fa-tools"></i> LocalCraft
+          </div>
+          <p class="mt-2">Connecting communities with trusted local professionals for all your service needs.</p>
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900">Company</div>
+          <ul class="mt-2 space-y-1">
+            <li><a href="#" class="hover:underline">About Us</a></li>
+            <li><a href="#" class="hover:underline">Careers</a></li>
+            <li><a href="#" class="hover:underline">Press</a></li>
+            <li><a href="#" class="hover:underline">Blog</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900">Support</div>
+          <ul class="mt-2 space-y-1">
+            <li><a href="#" class="hover:underline">Help Center</a></li>
+            <li><a href="#" class="hover:underline">Safety</a></li>
+            <li><a href="#" class="hover:underline">Community</a></li>
+            <li><a href="#" class="hover:underline">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900">Contact</div>
+          <ul class="mt-2 space-y-1">
+            <li>1-800-LOCAL-CRAFT</li>
+            <li><a href="mailto:support@localcraft.com" class="hover:underline">support@localcraft.com</a></li>
+            <li>123 Service St, Helper City</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-6 text-center">© 2024 LocalCraft. All rights reserved. | Privacy Policy | Terms of Service</div>
+    </footer>
+  </main>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="fixed inset-0 hidden items-center justify-center">
+    <div class="absolute inset-0 modal-overlay"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 modal-panel">
+      <button id="close-profile" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+      <h3 class="text-xl font-semibold mb-4">Technician Profile</h3>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs uppercase text-gray-500">First Name</label>
+          <div id="pf-first" class="font-medium">—</div>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-gray-500">Last Name</label>
+          <div id="pf-last" class="font-medium">—</div>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-gray-500">Phone Number</label>
+          <div id="pf-phone" class="font-medium">—</div>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-gray-500">Location</label>
+          <div id="pf-location" class="font-medium">—</div>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-gray-500">Profession</label>
+          <div id="pf-prof" class="font-medium">—</div>
+        </div>
+        <div>
+          <label class="text-xs uppercase text-gray-500">Experience</label>
+          <div id="pf-exp" class="font-medium">—</div>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs uppercase text-gray-500">Specialization</label>
+          <div id="pf-spec" class="font-medium">—</div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="text-xs uppercase text-gray-500">Shop Images</label>
+        <div class="grid grid-cols-3 gap-3 mt-2">
+          <div class="img-tile"><img id="pf-img1" alt="Shop image 1"></div>
+          <div class="img-tile"><img id="pf-img2" alt="Shop image 2"></div>
+          <div class="img-tile flex items-center justify-center text-gray-400">+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===========================
+   State & helpers
+=========================== */
+const qs = (sel) => document.querySelector(sel);
+const jobsList   = qs('#jobs-list');
+const jobsEmpty  = qs('#jobs-empty');
+const jobsError  = qs('#jobs-error');
+
+let ME = null;                // /auth/me result
+let TECH = null;              // technician profile
+let ACTIVE_BOOKING = null;    // booking object after accepting
+let map, techMarker, custMarker, routeLine;
+let geoWatchId = null;
+let sse = null;               // EventSource for /api/bookings/{id}/stream
+const PLACEHOLDER_IMG = '/img/placeholder-avatar.png';
+
+const API_OPTS = { credentials: 'include', headers: { 'Accept': 'application/json' } };
+
+function num(v){ return typeof v==='number' ? v : (v==null ? null : parseFloat(v)); }
+function kmHaversine(a1,o1,a2,o2){
+  const R=6371, dA=(a2-a1)*Math.PI/180, dO=(o2-o1)*Math.PI/180;
+  const x=Math.sin(dA/2)**2 + Math.cos(a1*Math.PI/180)*Math.cos(a2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function emojiIcon(emoji){
+  return L.divIcon({ className:'', html:`<div style="font-size:28px">${emoji}</div>`, iconSize:[28,28], iconAnchor:[14,14] });
+}
+function handleAuthFailure(status){ return (status===401||status===403) ? String(status) : ''; }
+
+/* ===========================
+   Backend calls
+=========================== */
+async function fetchMe(){
+  const r = await fetch('/auth/me', { cache: 'no-store', ...API_OPTS });
+  const af = handleAuthFailure(r.status);
+  if (af) throw new Error(af);
+  if(!r.ok) throw new Error('not-auth');
+  return r.json();
+}
+async function fetchTechByEmail(email){
+  const r = await fetch('/api/technicians/by-email?email=' + encodeURIComponent(email), API_OPTS);
+  const af = handleAuthFailure(r.status);
+  if (af) throw new Error(af);
+  if(!r.ok) throw new Error('tech-not-found');
+  return r.json();
+}
+async function fetchPendingSmart(){
+  try {
+    const r = await fetch('/api/bookings/pending', { cache: 'no-store', ...API_OPTS });
+    const af = handleAuthFailure(r.status);
+    if (!af && r.ok) return r.json();
+  } catch (_) {}
+  if (ME && ME.techId) {
+    const url = `/jobs/for-tech/${ME.techId}?status=PENDING`;
+    const r2 = await fetch(url, { cache: 'no-store', ...API_OPTS });
+    if (r2.ok) return r2.json();
+  }
+  return [];
+}
+async function acceptBooking(id){
+  const r = await fetch(`/api/bookings/${encodeURIComponent(id)}/accept`, { method:'POST', ...API_OPTS });
+  if(!r.ok){ throw new Error((await r.text().catch(()=>'')) || 'accept-fail'); }
+  return r.json();
+}
+/* NEW: real decline implementation with safe fallback */
+async function declineBooking(id){
+  // Try primary endpoint
+  let r = await fetch(`/api/bookings/${encodeURIComponent(id)}/reject`, { method:'POST', ...API_OPTS }).catch(()=>null);
+  if (r && r.ok) return true;
+
+  // Fallbacks some teams use
+  r = await fetch(`/api/bookings/${encodeURIComponent(id)}/decline`, { method:'POST', ...API_OPTS }).catch(()=>null);
+  if (r && r.ok) return true;
+
+  r = await fetch(`/jobs/${encodeURIComponent(id)}/reject`, { method:'POST', ...API_OPTS }).catch(()=>null);
+  if (r && r.ok) return true;
+
+  const msg = r ? (await r.text().catch(()=>'')) : 'network error';
+  throw new Error(msg || 'decline-fail');
+}
+async function postLocation(id, sender, lat, lng){
+  return fetch(`/api/bookings/${encodeURIComponent(id)}/location`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'Accept':'application/json'},
+    ...API_OPTS,
+    body: JSON.stringify({ sender, lat, lng })
+  }).catch(()=>{});
+}
+
+/* ===========================
+   UI: jobs list
+=========================== */
+function jobCard(b){
+  const wrap = document.createElement('div');
+  wrap.className = 'border rounded-lg p-4';
+
+  const status = b.status || b.bookingStatus || 'PENDING';
+  const pill = `<span class="pill ${status==='PENDING'?'pill-pending':'pill-accepted'}">${status}</span>`;
+  const lat = b.customerLat ?? (b.customerLatitude ?? null);
+  const lng = b.customerLng ?? (b.customerLongitude ?? null);
+  const coords = (lat!=null && lng!=null) ? `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : '—';
+  const custName = (b.customer && (b.customer.fullName || b.customer.email)) || b.customerName || 'Customer';
+  const service = b.serviceType || b.mode || 'Service';
+
+  wrap.innerHTML = `
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="font-semibold text-gray-900">#${b.id} • ${service}</div>
+        <div class="text-sm text-gray-700 mt-1">
+          <div><span class="font-medium">Customer:</span> ${custName}</div>
+          <div><span class="font-medium">Coords:</span> ${coords}</div>
+          ${b.note ? `<div><span class="font-medium">Note:</span> ${b.note}</div>` : ``}
+        </div>
+      </div>
+      <div>${pill}</div>
+    </div>
+    <div class="mt-3 flex items-center gap-2">
+      <button class="btn btn-accept"><i class="fas fa-check"></i>Accept</button>
+      <button class="btn btn-decline"><i class="fas fa-times"></i>Decline</button>
+      <button class="btn bg-gray-100 text-gray-800"><i class="fas fa-map"></i> Preview</button>
+    </div>
+  `;
+
+  const [btnAccept, btnDecline, btnPreview] = wrap.querySelectorAll('button');
+
+  btnAccept.addEventListener('click', async () => {
+    try{
+      const meRes = await fetch('/auth/me', { cache: 'no-store', credentials: 'same-origin' });
+      if (meRes.status === 401) { alert('Please log in as a technician.'); window.location.href = '/login-user'; return; }
+      const me = await meRes.json().catch(()=> ({}));
+      if (!me || (me.role || '').toLowerCase() !== 'technician') { alert('This tab is not logged in as a technician.'); window.location.href = '/login-user'; return; }
+
+      const accepted = await acceptBooking(b.id);
+      ACTIVE_BOOKING = accepted;
+      startTrip(accepted);
+      const ph = qs('#live-placeholder');
+      if (ph) ph.classList.add('hidden');
+      await loadJobs();
+      alert('Accepted. Live tracking started.');
+    }catch(e){
+      console.error(e);
+      alert('Could not accept. ' + (e?.message || e));
+    }
+  });
+
+  /* NEW: real decline */
+  btnDecline.addEventListener('click', async () => {
+    if (!confirm('Decline this job request?')) return;
+    try {
+      await declineBooking(b.id);
+      await loadJobs();
+      alert('Declined.');
+    } catch (e) {
+      console.error(e);
+      alert('Could not decline. ' + (e?.message || e));
+    }
+  });
+
+  btnPreview.addEventListener('click', () => {
+    renderMapFor(b);
+  });
+
+  return wrap;
+}
+
+async function loadJobs(){
+  jobsError.classList.add('hidden');
+  try{
+    const list = await fetchPendingSmart();
+    jobsList.innerHTML = '';
+    if(!Array.isArray(list) || list.length===0){
+      jobsEmpty.classList.remove('hidden');
+    }else{
+      jobsEmpty.classList.add('hidden');
+      list.forEach(b => jobsList.appendChild(jobCard(b)));
+    }
+  }catch(e){
+    console.error('jobs load error:', e);
+    jobsError.classList.remove('hidden');
+  }
+}
+
+/* ===========================
+   Map & tracking
+=========================== */
+function initMap(){
+  if(map) return;
+  map = L.map('map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  map.setView([17.4, 78.5], 12);
+}
+function drawLine(ll1, ll2){
+  if(routeLine) routeLine.remove();
+  routeLine = L.polyline([ll1, ll2], { weight:4, opacity:.85 }).addTo(map);
+}
+function fitBounds(a, b){
+  const bounds = L.latLngBounds([a, b]);
+  map.fitBounds(bounds.pad(0.3));
+}
+async function reverseGeocode(lat, lng){
+  try{
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+    const j = await r.json();
+    const a = j.address || {};
+    const parts = [a.road,a.suburb,a.city||a.town,a.state,a.postcode].filter(Boolean);
+    return parts.join(', ') || `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+  }catch{
+    return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+  }
+}
+function renderMapFor(b){
+  initMap();
+
+  const cLat = num(b.customerLat ?? b.customerLatitude);
+  const cLng = num(b.customerLng ?? b.customerLongitude);
+  if(cLat==null || cLng==null){ alert('This request has no customer location.'); return; }
+
+  const custLL = [cLat, cLng];
+  if(custMarker) custMarker.remove();
+  custMarker = L.marker(custLL, { icon: emojiIcon('🧑‍🦰') }).addTo(map).bindPopup('Customer');
+
+  if(techMarker) techMarker.remove();
+  if(routeLine) routeLine.remove();
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const tLL = [pos.coords.latitude, pos.coords.longitude];
+    techMarker = L.marker(tLL, { icon: emojiIcon('🛠️') }).addTo(map).bindPopup('You');
+
+    const addr = await reverseGeocode(cLat, cLng);
+    const custName = (b.customer && (b.customer.fullName || b.customer.email)) || b.customerName || 'Customer';
+    qs('#trip-customer').textContent = custName;
+    qs('#trip-dest').textContent = addr;
+    qs('#trip-dist').textContent = kmHaversine(tLL[0], tLL[1], custLL[0], custLL[1]).toFixed(2) + ' km';
+
+    fitBounds(tLL, custLL);
+    drawLine(tLL, custLL);
+  });
+}
+
+/* ---------------------------
+   Trip start after Accept
+---------------------------- */
+function openSSE(bookingId){
+  if(sse){ try{sse.close();}catch{} sse=null; }
+  sse = new EventSource(`/api/bookings/${encodeURIComponent(bookingId)}/stream`);
+  sse.addEventListener('location', (ev) => {
+    const d = JSON.parse(ev.data);
+    const lat = num(d.lat), lng = num(d.lng);
+    if(lat==null || lng==null) return;
+
+    if(d.sender === 'CUSTOMER'){
+      const ll = [lat,lng];
+      if(!custMarker){
+        custMarker = L.marker(ll, { icon: emojiIcon('🧑‍🦰') }).addTo(map);
+      }else{
+        custMarker.setLatLng(ll);
+      }
+    }
+    if(techMarker && custMarker){
+      const a = techMarker.getLatLng(), c = custMarker.getLatLng();
+      qs('#trip-dist').textContent = kmHaversine(a.lat, a.lng, c.lat, c.lng).toFixed(2) + ' km';
+      drawLine([a.lat,a.lng], [c.lat,c.lng]);
+    }
+  });
+  sse.onerror = () => {
+    try{sse.close();}catch{}
+    setTimeout(() => openSSE(bookingId), 2000);
+  };
+}
+function startTrip(b){
+  ACTIVE_BOOKING = b;
+  renderMapFor(b);
+
+  if(geoWatchId){ navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+  openSSE(b.id);
+
+  geoWatchId = navigator.geolocation.watchPosition(async pos => {
+    if(!ACTIVE_BOOKING) return;
+    const tLL = [pos.coords.latitude, pos.coords.longitude];
+
+    if(!techMarker){
+      techMarker = L.marker(tLL, { icon: emojiIcon('🛠️') }).addTo(map).bindPopup('You');
+    }else{
+      techMarker.setLatLng(tLL);
+    }
+
+    if(custMarker){
+      const c = custMarker.getLatLng();
+      drawLine(tLL, [c.lat, c.lng]);
+      qs('#trip-dist').textContent = kmHaversine(tLL[0], tLL[1], c.lat, c.lng).toFixed(2) + ' km';
+    }
+
+    postLocation(ACTIVE_BOOKING.id, 'TECH', tLL[0], tLL[1]);
+  }, err => {
+    console.warn('Geo watch error', err);
+    alert('Enable location permission for live tracking.');
+  }, { enableHighAccuracy:true, maximumAge:0, timeout:10000 });
+}
+
+/* ===========================
+   Profile modal helpers
+=========================== */
+function openProfile(){
+  qs('#profile-modal').classList.remove('hidden');
+  qs('#profile-modal').classList.add('flex');
+  document.body.classList.add('body-lock');
+}
+function closeProfile(){
+  qs('#profile-modal').classList.add('hidden');
+  qs('#profile-modal').classList.remove('flex');
+  document.body.classList.remove('body-lock');
+}
+async function humanAddressFromLocString(locStr){
+  if(!locStr || !locStr.includes(',')) return '—';
+  const [lat,lng] = locStr.split(',').map(s=>parseFloat(s.trim()));
+  if(isNaN(lat)||isNaN(lng)) return locStr;
+  return await reverseGeocode(lat,lng);
+}
+function pickUrl(raw){
+  if(!raw) return '';
+  if(/^https?:\/\//i.test(raw)) return raw;
+  if(raw.startsWith('/')) return raw;
+  return '/uploads/' + encodeURIComponent(raw);
+}
+async function fillProfile(tech){
+  // tolerate field naming differences
+  const first = tech.firstName || tech.firstname || tech.name || '';
+  const last  = tech.lastName  || tech.lastname  || '';
+  const phone = tech.phone || tech.mobile || tech.contact || '';
+  const role  = tech.profession || tech.role || 'Technician';
+  const exp   = (tech.experience!=null ? tech.experience : tech.yearsOfExperience);
+  const spec  = tech.specialization || tech.skills || '';
+
+  qs('#pf-first').textContent = first || '—';
+  qs('#pf-last').textContent  = last  || '—';
+  qs('#pf-phone').textContent = phone || '—';
+  qs('#pf-prof').textContent  = role  || '—';
+  qs('#pf-exp').textContent   = (exp!=null ? `${exp} Years` : '—');
+  qs('#pf-spec').textContent  = spec  || '—';
+
+  const locString = tech.location || ((tech.latitude!=null&&tech.longitude!=null)? `${tech.latitude},${tech.longitude}` : '');
+  qs('#pf-location').textContent = await humanAddressFromLocString(locString);
+
+  const img1 = pickUrl(tech.profilePhotoUrl || tech.profilePhoto);
+  const img2 = pickUrl(tech.workshopPhotoUrl || tech.workshopPhoto);
+  qs('#pf-img1').src = img1 || PLACEHOLDER_IMG;
+  qs('#pf-img2').src = img2 || PLACEHOLDER_IMG;
+}
+
+/* ===========================
+   Boot sequence
+=========================== */
+(async function init(){
+  try{
+    ME = await fetchMe();
+  }catch(e){
+    window.location.href = '/login-user';
+    return;
+  }
+  if(!ME.role || ME.role.toLowerCase() !== 'technician'){
+    window.location.href = '/customer-details';
+    return;
+  }
+
+  const displayName = ME.name || ME.email || 'Technician';
+  qs('#greet-name').textContent = displayName;
+  const topName = qs('#top-name'); if (topName) topName.textContent = displayName;
+
+  try{
+    TECH = await fetchTechByEmail(ME.email);
+    await fillProfile(TECH);
+  }catch(e){
+    console.warn('profile fetch failed', e);
+  }
+
+  await loadJobs();
+
+  const btnRef = qs('#btn-refresh');
+  if (btnRef) btnRef.addEventListener('click', () => window.location.reload());
+
+  const btnProfile = qs('#btn-profile');
+  const closeBtn   = qs('#close-profile');
+  const modal      = qs('#profile-modal');
+  if (btnProfile) btnProfile.addEventListener('click', openProfile);
+  if (closeBtn)   closeBtn.addEventListener('click', closeProfile);
+  if (modal)      modal.addEventListener('click', (e)=>{ if(e.target.id==='profile-modal') closeProfile(); });
+})();
+</script>
+
+</body>
+</html>
