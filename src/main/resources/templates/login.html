@@ -132,65 +132,34 @@ button:hover { background: #564fc6; }
 </div>
 
 <script>
-let otpTimer, timeLeft = 120;
+  let otpTimer, timeLeft = 120;
 const anchor = document.getElementById('resend-anchor');
 const timerText = document.getElementById('timer-text');
 let currentPhone = "";
-
-/* ========= Customer identity helpers (ADD/KEEP) ========= */
-function uuid4(){
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
-    return v.toString(16);
-  });
-}
- function setIdentityForPhone(phone){
-  if(!phone) return;
-  const key = 'PHONE:' + phone;
-  try { localStorage.setItem('lc.key', key); } catch(e){}
-  // also keep your existing stored phone for convenience
-  try { localStorage.setItem('lc.customer.phone', phone); } catch(e){}
-  try { sessionStorage.setItem('lc.customer.phone', phone); } catch(e){}
-  document.cookie = 'lc_phone=' + encodeURIComponent(phone) + '; path=/';
-  document.cookie = 'lc_key='   + encodeURIComponent(key)   + '; path=/; max-age=' + (60*60*24*365);
-}
-
-
-function ensureCustomerKey(){
-  // priority: localStorage, cookie; create if missing
-  try {
-    let key = localStorage.getItem('lc.key');
-    if (!key) {
-      const ck = (document.cookie.match(/(?:^|; )lc_key=([^;]+)/)||[])[1];
-      key = ck ? decodeURIComponent(ck) : uuid4();
-      localStorage.setItem('lc.key', key);
-    }
-    document.cookie = 'lc_key=' + encodeURIComponent(key) + '; path=/; max-age=' + (60*60*24*365);
-    return key;
-  } catch(e) {
-    const key = uuid4();
-    document.cookie = 'lc_key=' + encodeURIComponent(key) + '; path=/; max-age=' + (60*60*24*365);
-    return key;
-  }
-}
-
-/* Make sure the browser has a durable customer key as soon as this page opens */
-document.addEventListener('DOMContentLoaded', () => {
-  ensureCustomerKey();
-});
+let sendingOtp = false; // ✅ prevent double-click spam
 
 // Step 1: Send OTP (backend call)
 function sendOTP(){
+  if(sendingOtp) return; // stop multiple requests
+  sendingOtp = true;
+
   const phone = document.getElementById('phone').value.trim();
   const errorDiv = document.getElementById('error-phone');
   const phoneExistDiv = document.getElementById('phone-exist');
+  const button = document.querySelector('#step-phone button');
+
   if(!/^\d{10}$/.test(phone)){
     errorDiv.classList.remove('hidden');
+    sendingOtp = false;
     return;
   }
+
   errorDiv.classList.add('hidden');
   phoneExistDiv.classList.add('hidden');
   currentPhone = phone;
+
+  // Disable button while sending
+  if(button){ button.disabled = true; button.innerText = "Sending..."; }
 
   fetch(`/otp/send?phone=${phone}`, { method: "POST" })
     .then(res => res.text())
@@ -201,6 +170,9 @@ function sendOTP(){
         document.getElementById('step-phone').classList.add('hidden');
         document.getElementById('step-otp').classList.remove('hidden');
         startOTPTimer();
+      } else if(result === "wait_before_resend"){ // ✅ NEW
+        errorDiv.innerText = "Please wait before requesting another OTP.";
+        errorDiv.classList.remove('hidden');
       } else {
         errorDiv.innerText = "Error sending OTP.";
         errorDiv.classList.remove('hidden');
@@ -209,136 +181,13 @@ function sendOTP(){
     .catch(err => {
       console.error(err);
       alert("Server error while sending OTP.");
-    });
-}
-
-// OTP Timer
-function startOTPTimer(){
-  timeLeft = 120;
-  anchor.classList.remove('active');
-  timerText.innerText = `You can resend the OTP after 02:00`;
-  otpTimer = setInterval(()=>{
-    timeLeft--;
-    let minutes = String(Math.floor(timeLeft/60)).padStart(2,'0');
-    let seconds = String(timeLeft%60).padStart(2,'0');
-    timerText.innerText = `You can resend the OTP after ${minutes}:${seconds}`;
-    if(timeLeft<=0){
-      clearInterval(otpTimer);
-      anchor.classList.add('active');
-      timerText.innerText = 'You can resend the OTP now.';
-      document.querySelectorAll('.otp-box').forEach(b=>b.value='');
-    }
-  },1000);
-}
-
-anchor.addEventListener('click', ()=>{
-  if(anchor.classList.contains('active')){
-    sendOTP();
-    document.querySelectorAll('.otp-box').forEach(b=>b.value='');
-  }
-});
-
-// OTP Input Move Next
-function moveNext(box,index){
-  const boxes = document.querySelectorAll('.otp-box');
-  if(box.value.length===1 && index<boxes.length-1){
-    boxes[index+1].focus();
-  }
-}
-
-// Step 2: Verify OTP (backend call)
-function verifyOTP(){
-  const boxes = document.querySelectorAll('.otp-box');
-  const otp = Array.from(boxes).map(b=>b.value).join('');
-  const errorDiv = document.getElementById('error-otp');
-
-  fetch(`/otp/verify?otpInput=${otp}&phone=${currentPhone}`, { method: "POST" })
-    .then(res => res.text())
-    .then(result => {
-      if(result === "success"){
-        // ✅ NEW: remember phone for UI convenience + ensure key exists
-        saveCustomerPhone(currentPhone);
-        ensureCustomerKey();
-
-        errorDiv.classList.add('hidden');
-        clearInterval(otpTimer);
-        document.getElementById('step-otp').classList.add('hidden');
-        document.getElementById('step-details').classList.remove('hidden');
-      } else {
-        errorDiv.classList.remove('hidden');
-        document.querySelector('.otp-container').classList.add('shake');
-        setTimeout(()=>document.querySelector('.otp-container').classList.remove('shake'),300);
-      }
     })
-    .catch(err => {
-      console.error(err);
-      alert("Server error while verifying OTP.");
+    .finally(() => {
+      sendingOtp = false;
+      if(button){ button.disabled = false; button.innerText = "Enter"; }
     });
 }
 
-// Password Validation
-document.getElementById('password').addEventListener('input',function(){
-  const val = this.value;
-  document.getElementById('char-condition').querySelector('i').className = val.length>=8?'fas fa-check text-green-500':'fas fa-times text-red-500';
-  document.getElementById('upper-condition').querySelector('i').className = /[A-Z]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
-  document.getElementById('digit-condition').querySelector('i').className = /\d/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
-  document.getElementById('special-condition').querySelector('i').className = /[!@#$%^&*]/.test(val)?'fas fa-check text-green-500':'fas fa-times text-red-500';
-});
-
-// Step 3: Submit Details (backend call)
-function submitDetails(){
-  const firstName = document.getElementById('firstName').value.trim();
-  const lastName = document.getElementById('lastName').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value.trim();
-  const emailError = document.getElementById('email-error');
-  const emailExistDiv = document.getElementById('email-exist');
-  const conditions = ['char-condition','upper-condition','digit-condition','special-condition'];
-  const allValid = conditions.every(id=>document.getElementById(id).querySelector('i').classList.contains('text-green-500'));
-
-  emailExistDiv.classList.add('hidden');
-
-  if(!firstName || !lastName || !email || !allValid || !/\S+@\S+\.\S+/.test(email)){
-    if(!/\S+@\S+\.\S+/.test(email)) emailError.classList.remove('hidden'); else emailError.classList.add('hidden');
-    return;
-  }
-  emailError.classList.add('hidden');
-
-  const user = { firstName, lastName, email, phone: currentPhone, password, role: "customer" };
-
-  fetch("/auth/signup", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(user)
-  })
-  .then(async res => {
-    const msg = await res.text();
-    if(msg==="email-exists"){
-      emailExistDiv.classList.remove('hidden');
-    } else if(res.ok){
-      // ✅ NEW: keep phone + key after account creation, then go home
-      saveCustomerPhone(currentPhone);
-      ensureCustomerKey();
-      alert("Account created successfully!");
-      window.location.href = "/";
-    } else {
-      alert("Error: " + msg);
-    }
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Server error while creating account.");
-  });
-}
-
-// Keep (already present)
-function saveCustomerPhone(phone){
-  if(!phone) return;
-  try { localStorage.setItem('lc.customer.phone', phone); } catch(e){}
-  try { sessionStorage.setItem('lc.customer.phone', phone); } catch(e){}
-  // cookie fallback
-  document.cookie = 'lc_phone=' + encodeURIComponent(phone) + '; path=/';
-}
 </script>
 
 

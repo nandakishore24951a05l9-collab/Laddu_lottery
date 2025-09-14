@@ -23,15 +23,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> {}) // will use the corsConfigurationSource() bean below
+            .cors(cors -> {}) // will use corsConfigurationSource() below
             .authorizeHttpRequests(auth -> auth
                 // Dev tools / static
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
 
-                // Public APIs your front-end actually calls
+                // Public APIs
                 .requestMatchers("/users/signup", "/users/login", "/users/email").permitAll()
-                .requestMatchers("/users/**").permitAll() // keep open if you rely on JSON login responses
+                .requestMatchers("/users/**").permitAll() 
                 .requestMatchers("/technicians/**", "/api/technicians/**").permitAll()
                 .requestMatchers("/api/bookings/**").permitAll()
                 .requestMatchers("/api/save-user-location").permitAll()
@@ -40,7 +40,10 @@ public class SecurityConfig {
                 .requestMatchers("/login-user", "/customer-login", "/technician-login", "/login").permitAll()
                 .requestMatchers("/auth/**").permitAll()
 
-                // Technician area (either authority spelling is accepted)
+                // Customer area → must be logged in
+                .requestMatchers("/customer-details").authenticated()
+
+                // Technician area
                 .requestMatchers("/technician", "/technician/**")
                     .hasAnyAuthority("ROLE_TECHNICIAN", "technician")
 
@@ -86,7 +89,7 @@ public class SecurityConfig {
         };
     }
 
-    // CORS for local dev (allow cookies)
+    // CORS for local dev (allow cookies/session)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration c = new CorsConfiguration();
