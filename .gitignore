@@ -31,3 +31,32 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### OS junk ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Logs / temp / env ###
+*.log
+*.tmp
+*.swp
+*.swo
+.env
+.env.*
+
+### Databases (H2 etc.) ###
+*.mv.db
+*.trace.db
+/data/
+data/
+
+### Windows shortcuts ###
+*.lnk
+
+### Nested repos / folders to ignore ###
+Local_craft/
+local/
+
+### (Optional) Node if present ###
+node_modules/
